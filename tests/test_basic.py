@@ -99,5 +99,11 @@ class BasicTests(unittest.TestCase):
         out=self.run_basic('10 SAVE "NO.BAS"\nRUN\nPRINT 6*7')
         self.assertIn('FILE COMMANDS REQUIRE DIRECT MODE',out);self.assertIn(' 42 ',out)
         self.assertFalse((self.folder/'NO.BAS').exists())
+    def test_iec_unavailable_preserves_default_storage(self):
+        out=self.run_basic('IEC ON\nIEC\nIEC DEVICE 31\nIEC DEVICE 9\nIEC STATUS\n10 PRINT 42\nSAVE "LOCAL.BAS",8\nIEC OFF\nRUN')
+        self.assertIn('UNSUPPORTED',out);self.assertIn('STORAGE: FAT BASIC FOLDER; IEC OFF',out)
+        self.assertIn('USE IEC DEVICE 8 THROUGH 30',out);self.assertIn('USE IEC ON FIRST',out)
+        self.assertEqual((self.folder/'LOCAL.BAS').read_text(),'10 PRINT 42\n')
+        self.assertIn(' 42 ',out)
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -36,6 +36,7 @@ def check(path,production=True):
     assert b'MICROSOFT 6502 BASIC 1.1' in data,'missing BASIC ROM data'
     assert b'TYPE HELP FOR COMMANDS' in data,'missing native string constants'
     if production:
+        assert b'IEC FIXTURE:' not in data and b'IEC MOCK READ' not in data,'test adapter in production'
         disassembly=subprocess.check_output(['objdump','-d',str(path)],text=True)
         assert not any('out' in line and '$0xe9' in line for line in disassembly.splitlines()),'debug port in production'
     print(f'PASS: {path}: x64 EFI, {count} valid sections, ROM and strings present')

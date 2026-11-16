@@ -1,4 +1,5 @@
 #include "basic.h"
+#include "iec.h"
 #include <string.h>
 static void emulator_fault(void) {exiting=1;}
 #define CHIPS_ASSERT(c) do {if(!(c))emulator_fault();} while(0)
@@ -48,8 +49,13 @@ static int filename(const char *p,char *name) {
     while(*p && *p!='"') {if(n==64)return 0;name[n++]=*p++;}
     if(*p++!='"')return 0;
     name[n]=0;while(*p==' ')++p;
-    if(*p==','){++p;while(*p==' ')++p;if(*p++!='8')return 0;while(*p==' ')++p;}
-    return *p==0 && valid_filename(name);
+    if(*p==','){
+        ++p;while(*p==' ')++p;unsigned dev=0,digits=0;
+        while(*p>='0'&&*p<='9'&&digits<2){dev=dev*10+(unsigned)(*p++-'0');++digits;}
+        if(!digits || dev!=(storage_iec_selected()?storage_iec_device():8))return 0;
+        while(*p==' ')++p;
+    }
+    return *p==0 && (storage_iec_selected()?iec_valid_name(name):valid_filename(name));
 }
 static void storage_error(int e) {
     const char *s=e==1?"?FILE NOT FOUND":e==2?"?FILE EXISTS (USE A NEW NAME)":e==4?"?FILE TOO LARGE":"?FILE I/O ERROR";
@@ -185,7 +191,9 @@ static int monitor(char *line) {
     if(same(p,"HELP")) {
         screen_text("MS BASIC: numbered lines, LIST, RUN, NEW, PRINT, INPUT, PEEK, POKE.\r"
                     "Arrow keys edit the visible screen. Enter submits that logical line.\r"
-                    "SAVE/LOAD \"NAME.BAS\" : 8-bit text programs in the BASIC folder; direct mode.\r"
+                    "SAVE/LOAD \"NAME.BAS\" : numbered 8-bit text programs; direct mode.\r"
+                    "IEC ON|OFF|STATUS|DEVICE 8..30. DIR/LOAD use selected storage.\r"
+                    "IEC: ZoomFloppy, SEQ text reads only, 16-char names; SAVE disabled.\r"
                     "DIR  CLS  RESET  EXIT  INFO. Esc stops RUN; F9 resets BASIC.\r"
                     "BITS 8|16|32|64|NATIVE, CALC expression: separate integer workbench.\r"
                     "BASIC keeps its original floating-point arithmetic in every BITS mode.\r"
@@ -196,8 +204,8 @@ static int monitor(char *line) {
         screen_text("BASIC EFI 0.1 / ORIGINAL MICROSOFT 6502 BASIC 1.1\r"
                     "64 KiB virtual machine; original BASIC workspace below $8000.\r"
                     "80x24 editable ISO/PETSCII screen; no C64 hardware or game emulation.\r"
-                    "File access: BASIC folder on boot volume (desktop: selected folder).\r");
-        platform_info();return 1;
+                    "FAT storage: BASIC folder on boot volume (desktop: selected folder).\r");
+        platform_info();storage_iec_info();return 1;
     }
     if(!strncmp(p,"CHARSET",7) && (p[7]==0 || p[7]==' ')) {
         p+=7;while(*p==' ')++p;
@@ -214,7 +222,12 @@ static int monitor(char *line) {
     if(same(p,"EXIT")){exiting=1;return 1;}
     if(same(p,"CLS")){screen_clear();return 1;}
     if(same(p,"RESET")){reset_requested=1;return 1;}
-    if(same(p,"DIR")){platform_directory();return 1;}
+    if(!strncmp(p,"IEC",3) && (p[3]==0 || p[3]==' '))return storage_iec_command(p+3);
+    if(same(p,"DIR")){
+        if(storage_iec_selected())storage_iec_directory(filebuf,sizeof(filebuf));
+        else platform_directory();
+        return 1;
+    }
     if(!strncmp(p,"BITS",4) && (p[4]==0 || p[4]==' ')) {
         p+=4;while(*p==' ')++p;
         if(*p) {
@@ -231,13 +244,18 @@ static int monitor(char *line) {
     int load=!strncmp(p,"LOAD",4)&&(p[4]==' '||p[4]=='"');
     if(save||load) {
         char name[65];size_t n;
-        if(!filename(p+4,name)){screen_text("?USE SAVE/LOAD \"NAME.BAS\" (SIMPLE FILENAME)\r");return 1;}
+        if(save && storage_iec_selected()){screen_text("?IEC READ ONLY; SAVE DISABLED. IEC OFF SELECTS FAT.\r");return 1;}
+        if(!filename(p+4,name)){
+            screen_text(storage_iec_selected()?"?IEC: 1-16 CHAR SIMPLE NAME; OPTIONAL DEVICE MUST MATCH IEC DEVICE\r":
+                        "?USE SAVE/LOAD \"NAME.BAS\" (SIMPLE FILENAME)\r");return 1;
+        }
         if(save) {
             if(!export_program(&n)){screen_text("?INVALID PROGRAM MEMORY OR UNSUPPORTED TEXT\r");return 1;}
             int e=platform_write(name,filebuf,n);if(e)storage_error(e);else screen_text("SAVED\r");
         }else {
-            int e=platform_read(name,filebuf,sizeof(filebuf),&n);
-            if(e)storage_error(e);
+            int iec=storage_iec_selected();
+            int e=iec?storage_iec_read(name,filebuf,sizeof(filebuf),&n):platform_read(name,filebuf,sizeof(filebuf),&n);
+            if(e){if(!iec)storage_error(e);}
             else if(!validate_source(n))screen_text("?INVALID BASIC TEXT (NUMBERED 8-BIT TEXT; 240 CHARS/LINE; 30000 BYTE BUDGET)\r");
             else {loading=1;load_new=1;load_pos=0;load_len=n;screen_text("LOADING\r");}
         }

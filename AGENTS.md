@@ -8,7 +8,13 @@ The default branch is main. User-facing documentation lives at
 https://github.com/oodler577/basic-efi/wiki; keep its source pages in docs/wiki
 so documentation edits are reviewable alongside code.
 
-File operations must stay inside the loaded-image volume's BASIC directory.
+FAT file operations must stay inside the loaded-image volume's BASIC directory.
+The user authorized an optional IEC/ZoomFloppy backend. Select it explicitly;
+retain that selection after failures, and never fall back to FAT silently.
+The first IEC milestone is read-only (directory, status, SEQ BASIC text).
+Never send disk-writing DOS commands, firmware-update requests or arbitrary
+user-supplied bus packets. Test IEC with mock transports and label real hardware
+unverified until actual adapter/drive evidence is recorded.
 Do not add raw host disk access, firmware variable writes, implicit overwrites,
 or native pointers accessible through PEEK/POKE. Test only against disposable
 image files. The production binary must not contain the QEMU debug-port write.

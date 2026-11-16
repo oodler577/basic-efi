@@ -8,7 +8,7 @@
 - [Character sets](Character-sets)
 - [Virtual video memory](Virtual-video-memory)
 - [Integer widths](Integer-widths)
-- [IEC and ZoomFloppy roadmap](IEC-and-ZoomFloppy-roadmap)
+- [IEC and ZoomFloppy](IEC-and-ZoomFloppy-roadmap)
 - [Graphics roadmap](Graphics-roadmap)
 - [Building and testing](Building-and-testing)
 - [Compatibility and troubleshooting](Compatibility-and-troubleshooting)

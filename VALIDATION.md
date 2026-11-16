@@ -1,5 +1,37 @@
 # BASIC EFI 0.1 validation — November 16, 2026
 
+## Read-only IEC milestone
+
+The x64 EFI build now includes an original xum1541 USB backend with explicit
+IEC/FAT selection, DOS status, directory listings and numbered-text SEQ reads.
+SAVE is blocked while IEC is selected, including after failure. Version 7/8
+and standard interface/endpoints are checked; unsupported modes are rejected.
+
+Locally, 34 Python integration/property/tool tests plus screen, charset and
+IEC C harnesses pass, also under ASan/UBSan. The IEC harness injects a timeout
+at every USB transfer and cancellation at every poll in a complete read;
+checks initialization recovery, DOS errors and malformed/short replies; and
+tests sizes 0–257, oversized files and truncated directories.
+
+All six real EFI scenarios pass locally. The added scenario boots a specially
+labelled test executable containing a synthetic USB_IO adapter, exercises the
+actual UEFI transport/ABI and monitor, and verifies LOAD/RUN, preserved programs
+after missing/binary files, timeout/reconnect, and explicit FAT export. It also
+checks malformed descriptors, multiple adapters and a removed protocol handle.
+Both rejected IEC SAVEs are verified absent from the FAT image. The test fixture
+is removed before firmware return; that cleanup was caught by the EXIT test.
+Production-image checks prohibit the mock adapter and debug-port writes.
+
+The hosted matrix additionally runs Clang, older GCC/OVMF and a dedicated IEC
+fuzzer. Consult the candidate's Actions run for its actual result. The release
+workflow will publish only after all jobs pass. There is no physical ZoomFloppy,
+USB controller or Commodore-drive test evidence yet. Packet mocks do not prove
+electrical timing, real firmware enumeration, or drive compatibility.
+
+`v0.1.0-test.2` (before IEC) passed all nine hosted checks and was published;
+its downloadable assets and source revision were independently verified against
+their SHA-256 manifests. New IEC candidates use new tags.
+
 ## Freestanding runtime fix
 
 The first graphics release candidate exposed Ubuntu 22.04's injected

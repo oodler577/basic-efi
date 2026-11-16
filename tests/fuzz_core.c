@@ -8,9 +8,10 @@ int platform_write(const char *n,const unsigned char *b,size_t l){(void)n;(void)
 void platform_directory(void){}
 void platform_info(void){}
 void platform_idle(void){}
+int platform_iec_transport(IecTransport *io){(void)io;return IEC_NO_ADAPTER;}
 int LLVMFuzzerTestOneInput(const uint8_t *data,size_t size){
     if(size>32768)return 0;
-    exiting=0;screen_clear();reset_machine();
+    exiting=0;storage_iec_close();screen_clear();reset_machine();
     size_t n=size<LINE_MAXIMUM?size:LINE_MAXIMUM;
     char line[LINE_MAXIMUM+1];memcpy(line,data,n);line[n]=0;
     normalize(line);(void)monitor(line);

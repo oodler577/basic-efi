@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "basic.h"
+#include "iec.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,6 +90,7 @@ int platform_key(int wait){
     return readkey();
 }
 void platform_idle(void){}
+int platform_iec_transport(IecTransport *io){(void)io;return IEC_UNSUPPORTED;}
 int platform_read(const char *name,unsigned char *buffer,size_t cap,size_t *length){
     if(!valid_filename(name))return 3;
     int fd=openat(rootfd,name,O_RDONLY|O_NOFOLLOW|O_NONBLOCK);
@@ -123,5 +125,5 @@ int main(int argc,char **argv){
     if(rootfd<0){perror(dir);return 1;}
     interactive=isatty(0)&&isatty(1);
     if(interactive){tcgetattr(0,&original);struct termios t=original;t.c_lflag&=(tcflag_t)~(ICANON|ECHO|ISIG);t.c_iflag&=(tcflag_t)~(IXON|ICRNL);t.c_cc[VMIN]=1;t.c_cc[VTIME]=0;tcsetattr(0,TCSAFLUSH,&t);fputs("\033[?1049h",stdout);atexit(restore);}
-    signal(SIGINT,on_signal);int result=basic_run();close(rootfd);return result;
+    signal(SIGINT,on_signal);int result=basic_run();storage_iec_close();close(rootfd);return result;
 }

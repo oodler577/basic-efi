@@ -61,6 +61,8 @@ def main():
         read_json();qmp('qmp_capabilities');wait_for('READY.')
         print('PASS: x64 EFI boots from an emulated USB mass-storage device',flush=True)
         qmp('screendump',{'filename':str(BUILD/'boot.ppm')})
+        type_line('IEC ON');wait_for('NO ZOOMFLOPPY/XUM1541 FOUND')
+        type_line('IEC');wait_for('STORAGE: FAT BASIC FOLDER; IEC OFF')
         type_line('PRINT 6*7');wait_for(' 42 ')
         type_line('10 PRINT "USB ROUNDTRIP"')
         type_line('SAVE "VMTEST.BAS"');wait_for('SAVED')

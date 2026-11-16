@@ -2,7 +2,7 @@
 
 [![Torture CI](https://github.com/oodler577/basic-efi/actions/workflows/ci.yml/badge.svg)](https://github.com/oodler577/basic-efi/actions/workflows/ci.yml)
 
-[User guide](https://github.com/oodler577/basic-efi/wiki) · [Build artifacts](https://github.com/oodler577/basic-efi/actions) · [Graphics roadmap](https://github.com/oodler577/basic-efi/wiki/Graphics-roadmap)
+[User guide](https://github.com/oodler577/basic-efi/wiki) · [Test releases](https://github.com/oodler577/basic-efi/releases) · [Build artifacts](https://github.com/oodler577/basic-efi/actions)
 
 Boot into an editable blue BASIC screen on an x64 UEFI machine. This runs
 Microsoft's original 6502 BASIC source, adapted for an isolated 6502 virtual
@@ -23,13 +23,15 @@ Start with the included VM image. Physical firmware compatibility has not been t
   rendering at 1x–4x integer scale. Select using `CHARSET ISO|PETSCII|LOWER`.
 - Byte-oriented text program SAVE/LOAD in the `BASIC` directory of the volume containing the
   EFI application. A USB stick works when its filesystem is exposed by the firmware.
+- Experimental ZoomFloppy/xum1541 IEC backend: explicit selection, drive status,
+  directory listing and SEQ text-program reads. Mock/EFI tested; real hardware unverified.
 - An exact-width integer workbench with 8, 16, 32, 64 and native-width modes.
 - Esc to interrupt a running program, F9 to reset the virtual machine, EXIT to
   return to the firmware or EFI shell that launched it.
 
 This is the Microsoft interpreter, with documented source adaptations. It is
 not the C64 ROM or a full C64 emulator. C64 machine-code games, sprites, SID,
-PETSCII graphics, disk images and JiffyDOS are outside this prototype.
+disk images and JiffyDOS are outside this prototype.
 
 ## Try it in a VM first
 
@@ -77,7 +79,7 @@ convenience; this release was tested with QEMU/OVMF on Linux.
 
 There is no installer. The application does not change partitions, write raw
 disk sectors, install a bootloader on an internal disk, or call SetVariable to
-change firmware settings. Its file interface opens only the `BASIC` directory
+change firmware settings. Its default FAT interface opens only the `BASIC` directory
 on its own loaded-image volume. Place it on USB, not your internal EFI partition.
 SAVE creates new files and refuses overwrites; LOAD replaces the BASIC program
 in memory after validating the source file.
@@ -106,8 +108,7 @@ RUN
 `LOAD "SCREEN.BAS"` demonstrates virtual screen bytes and colors.
 
 `SAVE` and `LOAD` operate in direct mode, outside a running program. The optional
-`,8` preserves familiar Commodore syntax; it refers to the same BASIC folder,
-not a selectable hardware drive. Filenames may contain letters, digits, dots,
+`,8` refers to the same BASIC folder while IEC is off. Filenames may contain letters, digits, dots,
 underscores and hyphens, up to 64 characters. Paths and dot-prefixed names are
 rejected. Use a new filename when saving a revised version.
 
@@ -122,7 +123,36 @@ LOAD does not automatically RUN. SAVE exports text, not tokenized PRG files.
 Ordinary BASIC syntax errors remain BASIC's responsibility. A structurally
 valid source file can still contain a program that reports an error when run.
 The minimal interpreter does not supply external file channels, OPEN/CLOSE,
-PRINT#/INPUT#, TI/TI$, or physical peripheral access.
+PRINT#/INPUT# or TI/TI$. IEC integration is provided by the direct-mode monitor.
+
+## Experimental IEC / ZoomFloppy
+
+The EFI executable can use a ZoomFloppy/xum1541 USB adapter through firmware's
+USB I/O protocol. Connect one adapter with firmware protocol version 7 or 8,
+an IEC cable and a powered drive. The initial implementation is **read-only**:
+
+```basic
+IEC ON
+IEC STATUS
+DIR
+LOAD "HELLO",8
+RUN
+IEC OFF
+SAVE "FROMIEC.BAS"
+```
+
+`HELLO` must be a **SEQ file containing numbered BASIC source text**. C64
+tokenized PRGs and games are not supported. Names use 1–16 letters, digits,
+spaces, dots, dashes or underscores; letters are sent in PETSCII uppercase.
+`IEC DEVICE 9` selects another address (8–30); an optional LOAD device suffix
+must match. `IEC` or `INFO` reports the selected storage.
+
+While IEC is selected, DIR/LOAD use the real drive and SAVE is rejected.
+Errors keep IEC selected: use `IEC ON` to reconnect or `IEC OFF` to return to
+the FAT BASIC folder. No silent fallback, formatting, scratches, bus-poke
+commands, adapter flashing, fastloaders or disk writes are provided.
+The ordinary desktop build has no USB backend. Physical adapter/drive testing
+is still required; see the [IEC guide](https://github.com/oodler577/basic-efi/wiki/IEC-and-ZoomFloppy-roadmap).
 
 ## Screen editing and virtual memory
 
@@ -254,8 +284,9 @@ captures for visible output and firmware return. Never run a test against an
 image containing work you want to preserve.
 
 The full CI runs GCC/Clang builds, sanitizers, seeded behavioral properties,
-coverage-guided fuzzing, PE validation, reproducible EFI rebuilds and four real
-EFI storage/boot scenarios. Run `make test-sanitize` and `make test-efi` locally;
+coverage-guided fuzzing (including IEC), PE validation, reproducible EFI rebuilds
+and six real EFI scenarios, one using a synthetic USB_IO adapter. Run
+`make test-sanitize` and `make test-efi` locally;
 see the [testing guide](https://github.com/oodler577/basic-efi/wiki/Building-and-testing)
 for details. `python3 tools/package.py` creates a source/boot archive in `dist/`.
 

@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Boot the explicitly labelled synthetic USB adapter build; never physical USB."""
+import qemu_smoke as q
+
+q.start()
+try:
+    q.read_json();q.qmp('qmp_capabilities');q.wait_for('READY.')
+    q.wait_for('IEC FIXTURE: DESCRIPTORS, MULTIPLE ADAPTERS, HOT-UNPLUG PASS')
+    def command(text,expected):
+        start=len(q.trace());q.type_line(text);q.wait_for(expected,after=start)
+    command('IEC ON','READ ONLY; XUM FIRMWARE 8')
+    command('IEC STATUS','00, OK,00,00')
+    command('DIR','BLOCKS FREE.')
+    assert '"HELLO" SEQ' in q.trace()
+    command('IEC DEVICE 9','IEC DEVICE 9')
+    command('LOAD "HELLO",8','OPTIONAL DEVICE MUST MATCH')
+    command('LOAD "HELLO",9','LOADED')
+    command('RUN','IEC MOCK READ')
+    command('LOAD "MISSING"','62, FILE NOT FOUND,00,00')
+    command('RUN','IEC MOCK READ')
+    command('LOAD "BAD"','INVALID BASIC TEXT')
+    command('RUN','IEC MOCK READ')
+    command('SAVE "IECWRITE.BAS"','IEC READ ONLY; SAVE DISABLED')
+    command('LOAD "TIMEOUT"','TRANSFER TIMEOUT')
+    command('SAVE "FAILWRITE.BAS"','IEC READ ONLY; SAVE DISABLED')
+    command('IEC STATUS','OFFLINE; USE IEC ON')
+    command('IEC ON','READ ONLY; XUM FIRMWARE 8')
+    command('LOAD "HELLO"','LOADED')
+    command('RUN','IEC MOCK READ')
+    command('IEC OFF','STORAGE: FAT BASIC FOLDER; IEC OFF')
+    command('SAVE "FROMIEC.BAS"','SAVED')
+    q.screenshot('iec-read-and-recovery')
+    command('EXIT','BASIC EFI EXIT RETURN');q.wait_for('IEC FIXTURE: CLEAN EXIT');q.assert_firmware_return()
+    print('PASS: real EFI USB_IO enumeration and adapter selection, status, DIR, SEQ LOAD/RUN, missing/binary files preserve BASIC, read-only routing, timeout/reconnect and FAT export')
+finally:
+    if q.proc.poll() is None:
+        try:q.qmp('quit')
+        except Exception:q.proc.terminate()
+    q.proc.wait(timeout=10)

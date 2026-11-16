@@ -21,6 +21,10 @@ an 8-bit or 16-bit host.
 | C64 game will not load | No C64 KERNAL, VIC-II, SID, disk-image or machine-code game compatibility |
 | Large integer loses precision in PRINT | PRINT uses classic BASIC arithmetic; use CALC for exact-width integers |
 | Long program disappeared from screen | LIST it; display scrolling does not erase stored program memory |
+| IEC finds no adapter | One supported ZoomFloppy/xum1541; firmware must expose USB_IO; physical compatibility is unverified |
+| IEC is offline after an error | Check drive/cable, then IEC ON to reconnect; IEC OFF explicitly restores FAT |
+| IEC SAVE is rejected | This milestone is read-only; IEC OFF then SAVE exports the loaded program to FAT |
+| IEC file refuses to load | A numbered source-text SEQ file is required; tokenized C64 PRGs are unsupported |
 
 ## Reporting a problem
 

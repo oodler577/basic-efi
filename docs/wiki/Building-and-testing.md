@@ -35,12 +35,17 @@ The **Torture CI** workflow runs on pushes, pull requests and manual dispatch:
 - 120 malformed imports checked for preservation of the existing program.
 - 10,000 screen scrolls and 200,000 seeded editing events with boundary/canary checks.
 - Coverage-guided libFuzzer runs against parsers, corrupted virtual program links,
-  and arbitrary screen-edit sequences.
+  arbitrary screen-edit sequences, IEC replies, filenames and directory records.
+- IEC protocol tests inject failure/cancellation at every transfer boundary,
+  check DOS status and read-only filenames, and exercise EOF/size boundaries.
 - Pinned vendor checksums and validation of PE headers, ROM data and production
   debug-port exclusion.
 - Byte-for-byte repeatability of the EFI executable within each build environment.
 - Actual EFI boot on QEMU PC/qemu64 and q35/max configurations, covering writable,
   read-only and missing-folder media, plus the uninstrumented production executable.
+- A sixth EFI scenario installs a synthetic ZoomFloppy USB_IO interface, exercises
+  enumeration, status/DIR/LOAD/RUN, timeout/reconnect and FAT export, and checks
+  that rejected IEC writes never reach FAT. This is not physical adapter testing.
 - Persisted FAT file contents, reset, break handling and return to the firmware menu.
 
 ## Fuzzing locally
@@ -49,11 +54,13 @@ Install Clang, then:
 
 ```sh
 make fuzz
-mkdir -p build/fuzz/core build/fuzz/screen build/crashes
+mkdir -p build/fuzz/core build/fuzz/screen build/fuzz/iec build/crashes
 cp tests/corpus/core/* build/fuzz/core/
 cp tests/corpus/screen/* build/fuzz/screen/
+cp tests/corpus/iec/* build/fuzz/iec/
 ./build/fuzz-core -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/core
 ./build/fuzz-screen -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/screen
+./build/fuzz-iec -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/iec
 ```
 
 Reproduce a discovered failure by passing its saved input file to the affected
@@ -67,7 +74,9 @@ an image containing valuable work. The tests keep per-scenario debug logs and
 screen captures. CI uploads these even after a failed job, when they exist.
 
 The production EFI executable omits debug-port I/O. `BOOTTEST.EFI` is explicitly
-for tests. The release package contains the production executable and clean
+for tests; `BOOTIEC.EFI` additionally contains the synthetic adapter. The
+production-image auditor rejects both mock-adapter markers and debug-port writes.
+The release package contains the production executable and clean
 examples, not test-created programs or diagnostic screenshots.
 
 The package has SHA-256 checksums and a source revision. Image creation is atomic:

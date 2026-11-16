@@ -58,6 +58,12 @@ This product includes software developed by Intel Corporation and its contributo
 
 ## Project additions
 
+The IEC implementation is original project code using the documented UEFI USB
+ABI and the xum1541 wire protocol. OpenCBM/xum1541 sources were consulted to
+establish command formats and protocol behavior; their implementation is not
+copied, linked or distributed here. Protocol references and the inspected source
+blob IDs are recorded in `docs/IEC-PROTOCOL.md`. OpenCBM itself is GPLv2.
+
 The host C code, build scripts, tests, examples and project documentation are
 provided under the MIT license in `LICENSE`. Upstream licenses continue to
 apply to the vendored components. QEMU, OVMF, the compiler and assembler are

@@ -1,6 +1,7 @@
 #include <efi.h>
 #include <efilib.h>
 #include "basic.h"
+#include "efi_usb.h"
 #include <string.h>
 static EFI_SYSTEM_TABLE *st;
 static EFI_BOOT_SERVICES *bs;
@@ -184,7 +185,16 @@ EFI_STATUS efi_main(EFI_HANDLE image,EFI_SYSTEM_TABLE *system){
         if(EFI_ERROR(opened))root->Open(root,&basic_dir,L"BASIC",EFI_FILE_MODE_READ,EFI_FILE_DIRECTORY);
         root->Close(root);
     }
-    graphics_init();basic_run();if(basic_dir)basic_dir->Close(basic_dir);
+    efi_usb_init(bs);
+#ifdef BASIC_IEC_FIXTURE
+    extern int iec_fixture_install(EFI_BOOT_SERVICES *);
+    if(!iec_fixture_install(bs))return EFI_DEVICE_ERROR;
+#endif
+    graphics_init();basic_run();storage_iec_close();if(basic_dir)basic_dir->Close(basic_dir);
+#ifdef BASIC_IEC_FIXTURE
+    extern void iec_fixture_uninstall(void);
+    iec_fixture_uninstall();
+#endif
     st->ConOut->SetMode(st->ConOut,(UINTN)original_mode);
     st->ConOut->SetAttribute(st->ConOut,EFI_LIGHTGRAY);st->ConOut->ClearScreen(st->ConOut);
     const char *done="BASIC EFI EXIT RETURN\n";while(*done)platform_trace(*done++);

@@ -13,8 +13,12 @@ SAVE and LOAD are direct-mode commands. They are not currently supported inside
 running programs. LOAD does not RUN automatically.
 
 The familiar optional device suffix is accepted: `LOAD "MYPROG.BAS",8` and
-`SAVE "MYPROG.BAS",8`. It is a compatibility spelling for the same BASIC folder,
-not an implementation of a Commodore serial bus or selectable disk unit.
+`SAVE "MYPROG.BAS",8`. With IEC off (the default), it means the same BASIC folder.
+`IEC ON` explicitly selects the experimental ZoomFloppy backend: DIR and LOAD
+then use the selected IEC drive, and SAVE is blocked. Use `IEC DEVICE 8` through
+`IEC DEVICE 30` to choose its address; a LOAD suffix must match that selection.
+`IEC OFF` restores FAT storage. See [IEC and ZoomFloppy](IEC-and-ZoomFloppy-roadmap)
+for the SEQ text format, 16-character IEC names and hardware-testing limits.
 
 ## File format
 
@@ -47,7 +51,7 @@ BASIC syntax or runtime errors can still occur when the imported program runs.
 
 Read-only media can be listed and loaded when the firmware permits it; SAVE
 reports an I/O error. A missing BASIC folder leaves the interpreter usable but
-disables file access. The application does not create an alternative directory
+disables FAT file access. The application does not create an alternative directory
 or search other volumes.
 
 ## Common messages
