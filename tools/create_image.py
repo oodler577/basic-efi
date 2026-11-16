@@ -24,7 +24,8 @@ def create(efi,output,force=False,programs=None):
         run('MKFS_FAT',['-F','32','-n','BASICEFI',str(temp)])
         run('MMD',['-i',str(temp),'::/EFI','::/EFI/BOOT','::/BASIC'])
         run('MCOPY',['-i',str(temp),str(efi),'::/EFI/BOOT/BOOTX64.EFI'])
-        for source in sorted(pathlib.Path(programs or ROOT/'programs').glob('*.BAS')):
+        sources=pathlib.Path(programs or ROOT/'programs')
+        for source in sorted([*sources.glob('*.BAS'),*sources.glob('*.PRG')]):
             run('MCOPY',['-i',str(temp),str(source),'::/BASIC/'+source.name])
         if force:os.replace(temp,target)
         else:

@@ -95,3 +95,7 @@ or direct hardware VRAM access is required.
 Try `LOAD "CHARSETS.BAS"` and `RUN` to view all three character tables; press a
 key between tables. Source and license attribution are in the repository's
 `NOTICE.md` and `licenses/x16-rom.md`.
+
+Tokenized C64 PRG loading selects PETSCII from ISO, preserves an existing LOWER
+selection, and keeps literal bytes unchanged. SAVEPRG preserves control bytes
+that text files cannot represent. See [C64 tokenized programs](C64-tokenized-programs).

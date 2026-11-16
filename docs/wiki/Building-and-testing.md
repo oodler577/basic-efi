@@ -35,9 +35,11 @@ The **Torture CI** workflow runs on pushes, pull requests and manual dispatch:
 - 120 malformed imports checked for preservation of the existing program.
 - 10,000 screen scrolls and 200,000 seeded editing events with boundary/canary checks.
 - Coverage-guided libFuzzer runs against parsers, corrupted virtual program links,
-  arbitrary screen-edit sequences, IEC replies, filenames and directory records.
+  arbitrary screen-edit sequences, IEC replies, filenames, directories and PRG conversion.
 - IEC protocol tests inject failure/cancellation at every transfer boundary,
   check DOS status and read-only filenames, and exercise EOF/size boundaries.
+- PRG tests execute hand-authored C64 tokens, preserve PETSCII, reject unsupported
+  keywords transactionally, check exact import/export and 20,000 corrupted records.
 - Pinned vendor checksums and validation of PE headers, ROM data and production
   debug-port exclusion.
 - Byte-for-byte repeatability of the EFI executable within each build environment.
@@ -54,13 +56,15 @@ Install Clang, then:
 
 ```sh
 make fuzz
-mkdir -p build/fuzz/core build/fuzz/screen build/fuzz/iec build/crashes
+mkdir -p build/fuzz/core build/fuzz/screen build/fuzz/iec build/fuzz/prg build/crashes
 cp tests/corpus/core/* build/fuzz/core/
 cp tests/corpus/screen/* build/fuzz/screen/
 cp tests/corpus/iec/* build/fuzz/iec/
+cp tests/corpus/prg/* build/fuzz/prg/
 ./build/fuzz-core -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/core
 ./build/fuzz-screen -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/screen
 ./build/fuzz-iec -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/iec
+./build/fuzz-prg -max_total_time=60 -artifact_prefix=build/crashes/ build/fuzz/prg
 ```
 
 Reproduce a discovered failure by passing its saved input file to the affected

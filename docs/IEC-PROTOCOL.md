@@ -35,8 +35,9 @@ and performs the TALK turnaround. Address bytes are `20|device` for LISTEN,
 for CLOSE and `60|channel` for TALK. UNLISTEN is `3F`; UNTALK is `5F`.
 Every WRITE completion must report exactly the number of bytes sent.
 
-SEQ reads OPEN channel 2 with `0:NAME,S,R`; directory reads OPEN channel 0 with
-`$0`. After UNLISTEN, DOS channel 15 is read before attempting file TALK.
+SEQ reads OPEN channel 2 with `0:NAME,S,R`; PRG reads use `0:NAME,P,R` on the
+same channel and retain the load-address bytes. Directory reads OPEN channel 0
+with `$0`. After UNLISTEN, DOS channel 15 is read before attempting file TALK.
 Read errors with DOS codes >=20 are reported. CLEAR_EOI precedes each TALK;
 128-byte chunks are followed by GET_EOI, including full-length final chunks.
 A short read without EOI is a protocol failure, not a successful truncated file.

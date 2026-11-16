@@ -139,13 +139,19 @@ int iec_valid_name(const char *name){
     }
     return name[0]!=' ' && name[n-1]!=' ';
 }
-int iec_read_file(Iec *s,unsigned dev,const char *name,unsigned char *out,size_t cap,size_t *length){
+static int read_typed(Iec *s,unsigned dev,const char *name,int prg,unsigned char *out,size_t cap,size_t *length){
     *length=0;if(!iec_valid_name(name))return IEC_BAD_NAME;
-    /* Force SEQ, read mode. Never pass DOS commands or overwrite syntax. */
+    /* Force SEQ or PRG, always read mode. Never pass user DOS syntax. */
     char request[23]="0:";size_t n=strlen(name);
     for(size_t i=0;i<n;++i)request[i+2]=name[i]>='a'&&name[i]<='z'?(char)(name[i]-32):name[i];
-    memcpy(request+n+2,",S,R",5);
+    memcpy(request+n+2,prg?",P,R":",S,R",5);
     return read_named(s,dev,request,2,out,cap,length);
+}
+int iec_read_file(Iec *s,unsigned dev,const char *name,unsigned char *out,size_t cap,size_t *length){
+    return read_typed(s,dev,name,0,out,cap,length);
+}
+int iec_read_program(Iec *s,unsigned dev,const char *name,unsigned char *out,size_t cap,size_t *length){
+    return read_typed(s,dev,name,1,out,cap,length);
 }
 int iec_read_directory(Iec *s,unsigned dev,unsigned char *out,size_t cap,size_t *length){
     return read_named(s,dev,"$0",0,out,cap,length);

@@ -24,7 +24,9 @@ Start with the included VM image. Physical firmware compatibility has not been t
 - Byte-oriented text program SAVE/LOAD in the `BASIC` directory of the volume containing the
   EFI application. A USB stick works when its filesystem is exposed by the firmware.
 - Experimental ZoomFloppy/xum1541 IEC backend: explicit selection, drive status,
-  directory listing and SEQ text-program reads. Mock/EFI tested; real hardware unverified.
+  directory listing, SEQ text and tokenized C64 PRG reads. Mock/EFI tested; real hardware unverified.
+- C64 BASIC V2 PRG import/export for the supported language subset, with token
+  translation, relocated line links and exact PETSCII literal preservation.
 - An exact-width integer workbench with 8, 16, 32, 64 and native-width modes.
 - Esc to interrupt a running program, F9 to reset the virtual machine, EXIT to
   return to the firmware or EFI shell that launched it.
@@ -118,7 +120,13 @@ matching charset before loading: these are not UTF-8 files and have no encoding
 metadata. Use CHR$ expressions to keep source portable and ASCII-only. Import accepts line numbers 0–63999 and at most 240 characters per
 line. It uses a conservative 30,000-byte storage budget before tokenization;
 oversized or structurally invalid imports leave the existing program intact.
-LOAD does not automatically RUN. SAVE exports text, not tokenized PRG files.
+LOAD does not automatically RUN. SAVE normally exports text. A `.PRG` suffix
+selects tokenized C64 BASIC V2 import/export; `LOADPRG "NAME"` and `SAVEPRG "NAME"`
+select it explicitly. Try `LOAD "C64HELLO.PRG"`, then `RUN`. PRGs must use the
+standard `$0801` address, valid line links and supported keywords. Imported
+PETSCII bytes are preserved without transcoding. See
+[C64 tokenized programs](https://github.com/oodler577/basic-efi/wiki/C64-tokenized-programs)
+for limits and differences from a C64.
 
 Ordinary BASIC syntax errors remain BASIC's responsibility. A structurally
 valid source file can still contain a program that reports an error when run.
@@ -141,8 +149,9 @@ IEC OFF
 SAVE "FROMIEC.BAS"
 ```
 
-`HELLO` must be a **SEQ file containing numbered BASIC source text**. C64
-tokenized PRGs and games are not supported. Names use 1–16 letters, digits,
+Plain `LOAD "HELLO"` requests a **SEQ file containing numbered BASIC source text**.
+Use `LOADPRG "HELLO",8` for a tokenized C64 BASIC PRG. Both paths validate before
+replacing the current program. C64 hardware and machine-code games are not emulated. Names use 1–16 letters, digits,
 spaces, dots, dashes or underscores; letters are sent in PETSCII uppercase.
 `IEC DEVICE 9` selects another address (8–30); an optional LOAD device suffix
 must match. `IEC` or `INFO` reports the selected storage.
@@ -284,7 +293,7 @@ captures for visible output and firmware return. Never run a test against an
 image containing work you want to preserve.
 
 The full CI runs GCC/Clang builds, sanitizers, seeded behavioral properties,
-coverage-guided fuzzing (including IEC), PE validation, reproducible EFI rebuilds
+coverage-guided fuzzing (including IEC and PRG conversion), PE validation, reproducible EFI rebuilds
 and six real EFI scenarios, one using a synthetic USB_IO adapter. Run
 `make test-sanitize` and `make test-efi` locally;
 see the [testing guide](https://github.com/oodler577/basic-efi/wiki/Building-and-testing)

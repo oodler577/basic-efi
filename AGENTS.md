@@ -11,7 +11,7 @@ so documentation edits are reviewable alongside code.
 FAT file operations must stay inside the loaded-image volume's BASIC directory.
 The user authorized an optional IEC/ZoomFloppy backend. Select it explicitly;
 retain that selection after failures, and never fall back to FAT silently.
-The first IEC milestone is read-only (directory, status, SEQ BASIC text).
+IEC remains read-only (directory, status, SEQ BASIC text and tokenized C64 PRGs).
 Never send disk-writing DOS commands, firmware-update requests or arbitrary
 user-supplied bus packets. Test IEC with mock transports and label real hardware
 unverified until actual adapter/drive evidence is recorded.

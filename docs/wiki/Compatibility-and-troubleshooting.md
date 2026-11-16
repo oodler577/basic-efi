@@ -24,7 +24,7 @@ an 8-bit or 16-bit host.
 | IEC finds no adapter | One supported ZoomFloppy/xum1541; firmware must expose USB_IO; physical compatibility is unverified |
 | IEC is offline after an error | Check drive/cable, then IEC ON to reconnect; IEC OFF explicitly restores FAT |
 | IEC SAVE is rejected | This milestone is read-only; IEC OFF then SAVE exports the loaded program to FAT |
-| IEC file refuses to load | A numbered source-text SEQ file is required; tokenized C64 PRGs are unsupported |
+| IEC file refuses to load | Use LOAD for SEQ text or LOADPRG for a supported C64 BASIC V2 PRG; check the drive status and PRG diagnostic |
 
 ## Reporting a problem
 

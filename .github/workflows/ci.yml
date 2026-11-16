@@ -50,7 +50,7 @@ jobs:
       - run: make test-sanitize CC=${{ matrix.cc }}
 
   fuzz:
-    name: Coverage-guided parser, screen and IEC fuzzing
+    name: Coverage-guided parser, screen, IEC and PRG fuzzing
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -61,13 +61,16 @@ jobs:
       - run: make fuzz
       - name: Fuzz private parsers, corrupt virtual program links, and screen editing
         run: |
-          mkdir -p build/fuzz/core build/fuzz/screen build/fuzz/iec build/crashes
+          mkdir -p build/fuzz/core build/fuzz/screen build/fuzz/iec build/fuzz/prg build/crashes
           cp tests/corpus/core/* build/fuzz/core/
           cp tests/corpus/screen/* build/fuzz/screen/
           cp tests/corpus/iec/* build/fuzz/iec/
+          cp tests/corpus/prg/* build/fuzz/prg/
+          cp tests/corpus/prg/* build/fuzz/core/
           ./build/fuzz-core -max_total_time=45 -timeout=5 -max_len=32768 -seed=6502 -artifact_prefix=build/crashes/ build/fuzz/core
           ./build/fuzz-screen -max_total_time=45 -timeout=5 -max_len=4096 -seed=8086 -artifact_prefix=build/crashes/ build/fuzz/screen
           ./build/fuzz-iec -max_total_time=45 -timeout=5 -max_len=131072 -seed=1541 -artifact_prefix=build/crashes/ build/fuzz/iec
+          ./build/fuzz-prg -max_total_time=45 -timeout=5 -max_len=30003 -seed=64 -artifact_prefix=build/crashes/ build/fuzz/prg
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

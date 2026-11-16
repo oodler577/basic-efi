@@ -27,6 +27,11 @@ The host supplies keyboard, output and break routines at the external vectors,
 an isolated RAM/ROM map, text import/export and the screen editor. BASIC's
 arithmetic implementation is retained. No downloaded C64 ROM image is included.
 
+The host now also translates the supported C64 BASIC V2 PRG token subset and
+relocates line links. This uses format constants, not the C64 ROM implementation.
+References and implementation boundaries are in `docs/C64-PRG.md`. PRG fixtures
+and the supplied C64HELLO example are original, hand-authored test programs.
+
 ## 6502 CPU emulation
 
 - Source: https://github.com/floooh/chips

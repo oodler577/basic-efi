@@ -1,5 +1,6 @@
 #include "basic.h"
 #include "iec.h"
+#include "prg.h"
 #include <string.h>
 static void emulator_fault(void) {exiting=1;}
 #define CHIPS_ASSERT(c) do {if(!(c))emulator_fault();} while(0)
@@ -10,6 +11,7 @@ static void emulator_fault(void) {exiting=1;}
 
 int exiting;
 static unsigned char memory[65536], filebuf[FILE_CAPACITY];
+static unsigned char prgbuf[PRG_CAPACITY],from_c64[256],to_c64[256];
 static m6502_t cpu;
 static uint64_t pins;
 static char input[LINE_MAXIMUM+2];
@@ -70,6 +72,30 @@ static void init_tokens(void) {
         if(n<15)tokens[t][n++]=(char)(c&127);
         if(c&128){++t;n=0;}
     }
+    prg_maps(tokens,from_c64,to_c64);
+}
+static void prg_message(const PrgError *error,int exporting){
+    char value[21];screen_text("?PRG ");screen_text(prg_error(error->code));
+    if(error->code==PRG_UNSUPPORTED){
+        screen_text(": ");
+        screen_text(exporting && error->token>=128?tokens[error->token-128]:prg_keyword(error->token));
+    }
+    if(error->line<=65535){decimal(error->line,value);screen_text(" IN ");screen_text(value);}
+    screen_text("\r");
+}
+static void setword(unsigned addr,unsigned value){memory[addr]=(unsigned char)value;memory[addr+1]=(unsigned char)(value>>8);}
+static void load_prg(size_t n){
+    size_t used;PrgError error;
+    if(prg_import(filebuf,n,from_c64,prgbuf,sizeof(prgbuf),&used,&error)){
+        prg_message(&error,0);return;
+    }
+    /* Only after complete validation: install relocated tokens, then let the
+       original interpreter's CLR reset strings, arrays, DATA, stack and CONT. */
+    memory[0x0400]=0;memcpy(memory+0x0401,prgbuf,used);
+    setword(ROM_TXTTAB,0x0401);setword(ROM_VARTAB,0x0401+(unsigned)used);
+    setword(ROM_MEMSIZ,0x8000);loading=2;
+    if(screen.charset==CHARSET_ISO){screen_charset(CHARSET_PET);screen_clear();}
+    screen_text("LOADING C64 BASIC PRG\r");
 }
 static int append(unsigned char *buf,size_t *used,const char *s) {
     size_t n=strlen(s);if(*used+n>=FILE_CAPACITY)return 0;
@@ -193,7 +219,8 @@ static int monitor(char *line) {
                     "Arrow keys edit the visible screen. Enter submits that logical line.\r"
                     "SAVE/LOAD \"NAME.BAS\" : numbered 8-bit text programs; direct mode.\r"
                     "IEC ON|OFF|STATUS|DEVICE 8..30. DIR/LOAD use selected storage.\r"
-                    "IEC: ZoomFloppy, SEQ text reads only, 16-char names; SAVE disabled.\r"
+                    "LOADPRG/SAVEPRG \"NAME\" or .PRG suffix: C64 BASIC V2 tokens.\r"
+                    "IEC: SEQ text or PRG reads; 16-char names; all SAVEs disabled.\r"
                     "DIR  CLS  RESET  EXIT  INFO. Esc stops RUN; F9 resets BASIC.\r"
                     "BITS 8|16|32|64|NATIVE, CALC expression: separate integer workbench.\r"
                     "BASIC keeps its original floating-point arithmetic in every BITS mode.\r"
@@ -240,22 +267,34 @@ static int monitor(char *line) {
         screen_text(" BITS; MS BASIC FLOATS UNCHANGED\r");return 1;
     }
     if(!strncmp(p,"CALC ",5)){calc(p+5);return 1;}
-    int save=!strncmp(p,"SAVE",4)&&(p[4]==' '||p[4]=='"');
-    int load=!strncmp(p,"LOAD",4)&&(p[4]==' '||p[4]=='"');
+    int explicit_prg=(!strncmp(p,"LOADPRG",7)||!strncmp(p,"SAVEPRG",7))&&(p[7]==' '||p[7]=='"');
+    unsigned prefix=explicit_prg?7:4;
+    int save=!strncmp(p,"SAVE",4)&&(explicit_prg||p[4]==' '||p[4]=='"');
+    int load=!strncmp(p,"LOAD",4)&&(explicit_prg||p[4]==' '||p[4]=='"');
     if(save||load) {
         char name[65];size_t n;
         if(save && storage_iec_selected()){screen_text("?IEC READ ONLY; SAVE DISABLED. IEC OFF SELECTS FAT.\r");return 1;}
-        if(!filename(p+4,name)){
+        if(!filename(p+prefix,name)){
             screen_text(storage_iec_selected()?"?IEC: 1-16 CHAR SIMPLE NAME; OPTIONAL DEVICE MUST MATCH IEC DEVICE\r":
                         "?USE SAVE/LOAD \"NAME.BAS\" (SIMPLE FILENAME)\r");return 1;
         }
+        int binary=explicit_prg || prg_filename(name);
         if(save) {
-            if(!export_program(&n)){screen_text("?INVALID PROGRAM MEMORY OR UNSUPPORTED TEXT\r");return 1;}
+            if(binary){
+                unsigned start=word(ROM_TXTTAB),end=word(ROM_VARTAB);PrgError error;
+                if(start<0x0401 || end>0x8000 || end<start+2){screen_text("?INVALID PROGRAM MEMORY\r");return 1;}
+                if(prg_export(memory+start,end-start,start,to_c64,filebuf,sizeof(filebuf),&n,&error)){
+                    prg_message(&error,1);return 1;
+                }
+            }else if(!export_program(&n) || !validate_source(n)){
+                screen_text("?INVALID PROGRAM MEMORY OR UNSUPPORTED TEXT; TRY SAVEPRG\r");return 1;
+            }
             int e=platform_write(name,filebuf,n);if(e)storage_error(e);else screen_text("SAVED\r");
         }else {
             int iec=storage_iec_selected();
-            int e=iec?storage_iec_read(name,filebuf,sizeof(filebuf),&n):platform_read(name,filebuf,sizeof(filebuf),&n);
+            int e=iec?storage_iec_read(name,binary,filebuf,sizeof(filebuf),&n):platform_read(name,filebuf,sizeof(filebuf),&n);
             if(e){if(!iec)storage_error(e);}
+            else if(binary || (n>=2 && filebuf[0]==1 && filebuf[1]==8))load_prg(n);
             else if(!validate_source(n))screen_text("?INVALID BASIC TEXT (NUMBERED 8-BIT TEXT; 240 CHARS/LINE; 30000 BYTE BUDGET)\r");
             else {loading=1;load_new=1;load_pos=0;load_len=n;screen_text("LOADING\r");}
         }
@@ -282,7 +321,12 @@ static void reset_machine(void) {
 static int get_input(void) {
     while(input_pos>=input_len) {
         if(loading) {
-            if(load_new){strcpy(input,"NEW");load_new=0;}
+            if(loading==2){strcpy(input,"CLR");loading=3;}
+            else if(loading==3){
+                loading=0;screen_text("LOADED C64 BASIC PRG; RUN TO START\r"
+                    "C64 HARDWARE, CLOCK AND I/O VARIABLES ARE NOT EMULATED.\r");continue;
+            }
+            else if(load_new){strcpy(input,"NEW");load_new=0;}
             else if(load_pos<load_len) {
                 size_t n=0;
                 while(load_pos<load_len && filebuf[load_pos]!='\r' && filebuf[load_pos]!='\n')input[n++]=(char)filebuf[load_pos++];

@@ -1,5 +1,32 @@
 # BASIC EFI 0.1 validation — November 16, 2026
 
+## Tokenized C64 BASIC V2 milestone
+
+The converter imports supported `$0801` C64 BASIC V2 PRGs from FAT or the
+read-only IEC backend, relocates links to `$0401`, and maps keywords by name
+into the actual native ROM table. FAT SAVEPRG reverses this mapping. Literal
+PETSCII bytes are preserved; C64 hardware, runtime disk channels and machine
+code remain unsupported. Details are in `docs/C64-PRG.md` and the wiki.
+
+Locally, all 45 Python tests and four C harnesses pass, also with ASan/UBSan.
+PRG tests execute arrays, DATA/READ, DEF FN, GOSUB and PI; round-trip every
+supported keyword and literal byte; preserve existing programs/variables after
+rejection; and cover maximum lengths, malformed links, unsupported tokens,
+truncation, failed text export and no-overwrite behavior. The C harness adds
+output canaries, capacity boundaries and 20,000 seeded corrupted records.
+
+All six local EFI scenarios pass, including FAT PRG load/run/export and PRG
+reads through the synthetic USB_IO adapter. Saved PRGs are compared exactly
+with independent fixtures. Rejected IEC SAVEPRG is checked absent from FAT.
+The native, sanitizer and EFI tests remain part of the hosted release gates;
+the fourth libFuzzer target checks PRG bounds and lossless inverse conversion.
+Consult the candidate's Actions result for the hosted run. Physical adapters,
+drives and PCs remain untested.
+
+The preceding `v0.1.0-test.3` IEC release passed all nine hosted checks; its
+published files and source revision were independently verified against their
+SHA-256 manifests. PRG support uses a new release tag.
+
 ## Read-only IEC milestone
 
 The x64 EFI build now includes an original xum1541 USB backend with explicit

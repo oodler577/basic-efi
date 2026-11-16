@@ -8,8 +8,8 @@ typedef struct {
     unsigned calls,cancel_calls,cancel_at,fail_at,short_at,pauses,bad;
     unsigned pending,mode,want,value,channel,talking,eoi,closed,opens,reads;
     unsigned status_mode,short_read,wrong_count;
-    const unsigned char *stream,*file,*directory;
-    size_t stream_length,position,file_length,directory_length;
+    const unsigned char *stream,*file,*directory,*prg;
+    size_t stream_length,position,file_length,directory_length,prg_length;
     char filename[24];
     const char *dos_status;
 } MockXum;

@@ -4,6 +4,7 @@ import os
 import pathlib
 import subprocess
 import sys
+from prg_fixture import HELLO,IEC_HELLO
 
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 QA=ROOT/'build/qa'
@@ -24,10 +25,12 @@ for scenario in ('debug','production','readonly','missing-folder','charsets','ie
     if scenario=='debug':
         saved=subprocess.check_output([os.environ.get('MTYPE','mtype'),'-i',str(image),'::/BASIC/VMTEST.BAS'])
         assert saved==b'10 PRINT "USB ROUNDTRIP"\n',saved
+        assert subprocess.check_output([os.environ.get('MTYPE','mtype'),'-i',str(image),'::/BASIC/C64COPY.PRG'])==HELLO
     elif scenario=='iec':
         saved=subprocess.check_output([os.environ.get('MTYPE','mtype'),'-i',str(image),'::/BASIC/FROMIEC.BAS'])
         assert saved==b'10 PRINT "IEC MOCK READ"\n20 END\n',saved
-        for name in ('IECWRITE.BAS','FAILWRITE.BAS'):
+        assert subprocess.check_output([os.environ.get('MTYPE','mtype'),'-i',str(image),'::/BASIC/IECC64.PRG'])==IEC_HELLO
+        for name in ('IECWRITE.BAS','FAILWRITE.BAS','C64WRITE.PRG'):
             denied=subprocess.run([os.environ.get('MTYPE','mtype'),'-i',str(image),'::/BASIC/'+name],capture_output=True)
             assert denied.returncode!=0,'IEC SAVE leaked to FAT'
     elif scenario in ('readonly','missing-folder'):

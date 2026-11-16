@@ -25,5 +25,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data,size_t size){
     MockXum peer;mock_xum_init(&peer);peer.file=data;peer.file_length=size;
     io=mock_xum_transport(&peer);(void)iec_connect(&s,&io);
     (void)iec_read_file(&s,8,"FUZZ",buffer,sizeof(buffer),&n);iec_disconnect(&s);
+    mock_xum_init(&peer);peer.prg=data;peer.prg_length=size;
+    io=mock_xum_transport(&peer);(void)iec_connect(&s,&io);
+    (void)iec_read_program(&s,8,"FUZZ",buffer,sizeof(buffer),&n);iec_disconnect(&s);
     return 0;
 }

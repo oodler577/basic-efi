@@ -17,6 +17,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data,size_t size){
     normalize(line);(void)monitor(line);
     bits=8u<<(size?data[0]%4:0);calc(line);
     memcpy(filebuf,data,size);(void)validate_source(size);
+    load_prg(size);
     /* Corrupt virtual program links and contents, never native memory pointers. */
     memcpy(memory+0x400,data,size>0x7c00?0x7c00:size);
     if(size>=4){memcpy(memory+ROM_TXTTAB,data,2);memcpy(memory+ROM_VARTAB,data+2,2);}

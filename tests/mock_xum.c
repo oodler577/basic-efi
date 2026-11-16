@@ -1,6 +1,8 @@
 #include "mock_xum.h"
 #include <string.h>
 static const unsigned char file_data[]="10 PRINT \"IEC MOCK READ\"\n20 END\n";
+static const unsigned char prg_data[]={1,8,0x15,8,10,0,0x99,' ','"',
+    'I','E','C',' ','C','6','4',' ','P','R','G','"',0,0x1b,8,20,0,0x80,0,0,0};
 static const unsigned char directory_data[]={
     1,8, 1,1, 0,0, 18,'"','I','E','C',' ','T','E','S','T','"',' ','I','D',' ','2','A',0,
     1,1, 1,0, ' ','"','H','E','L','L','O','"',' ','S','E','Q',0,
@@ -10,6 +12,7 @@ static int bad(MockXum *m){++m->bad;return IEC_PROTOCOL;}
 void mock_xum_init(MockXum *m){
     memset(m,0,sizeof(*m));m->version=8;m->capabilities=1;
     m->file=file_data;m->file_length=sizeof(file_data)-1;
+    m->prg=prg_data;m->prg_length=sizeof(prg_data);
     m->directory=directory_data;m->directory_length=sizeof(directory_data);
     m->dos_status="00, OK,00,00\r";
 }
@@ -31,9 +34,9 @@ static int bus_write(MockXum *m,const unsigned char *b,size_t n){
         if(n>=sizeof(m->filename))return bad(m);
         memcpy(m->filename,b,n);m->filename[n]=0;
         if((m->channel==0 && strcmp(m->filename,"$0")) ||
-           (m->channel==2 && (n<7 || memcmp(b,"0:",2) || memcmp(b+n-4,",S,R",4))) ||
+           (m->channel==2 && (n<7 || memcmp(b,"0:",2) || (memcmp(b+n-4,",S,R",4) && memcmp(b+n-4,",P,R",4)))) ||
            (m->channel!=0 && m->channel!=2))return bad(m);
-        if(!strcmp(m->filename,"0:MISSING,S,R"))m->dos_status="62, FILE NOT FOUND,00,00\r";
+        if(!strcmp(m->filename,"0:MISSING,S,R") || !strcmp(m->filename,"0:MISSING,P,R"))m->dos_status="62, FILE NOT FOUND,00,00\r";
         else m->dos_status="00, OK,00,00\r";
         return IEC_OK;
     }
@@ -50,7 +53,10 @@ static int bus_write(MockXum *m,const unsigned char *b,size_t n){
         m->talking=1;m->position=0;
         if(secondary==15){m->stream=(const unsigned char*)m->dos_status;m->stream_length=strlen(m->dos_status);}
         else if(secondary==0){m->stream=m->directory;m->stream_length=m->directory_length;}
-        else if(secondary==2){m->stream=m->file;m->stream_length=m->file_length;}
+        else if(secondary==2){
+            int prg=strlen(m->filename)>=4 && m->filename[strlen(m->filename)-3]=='P';
+            m->stream=prg?m->prg:m->file;m->stream_length=prg?m->prg_length:m->file_length;
+        }
         else return bad(m);
     }else{
         if((b[0]&0xe0)!=0x20)return bad(m);

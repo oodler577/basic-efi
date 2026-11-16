@@ -18,14 +18,17 @@ The familiar optional device suffix is accepted: `LOAD "MYPROG.BAS",8` and
 then use the selected IEC drive, and SAVE is blocked. Use `IEC DEVICE 8` through
 `IEC DEVICE 30` to choose its address; a LOAD suffix must match that selection.
 `IEC OFF` restores FAT storage. See [IEC and ZoomFloppy](IEC-and-ZoomFloppy-roadmap)
-for the SEQ text format, 16-character IEC names and hardware-testing limits.
+for SEQ/PRG file types, 16-character IEC names and hardware-testing limits.
 
-## File format
+## Text format
 
 Programs are byte-oriented text (ASCII plus bytes 160–255 in quoted strings),
 one numbered BASIC line per text
 line, with LF or CRLF endings. SAVE expands tokens back to readable text.
-Tokenized PRG files, D64 disk images and JiffyDOS commands are not supported.
+A `.PRG` suffix or explicit LOADPRG/SAVEPRG command selects the supported C64
+BASIC V2 tokenized format. See [C64 tokenized programs](C64-tokenized-programs)
+for binary limits, PETSCII preservation and IEC PRG reads. D64 disk images and
+JiffyDOS commands are not supported.
 
 | Limit | Value |
 |---|---|
@@ -62,6 +65,7 @@ or search other volumes.
 | FILE NOT FOUND | Check DIR and spelling |
 | FILE I/O ERROR | Check write protection, media availability and filesystem health |
 | BASIC FOLDER UNAVAILABLE | Put a BASIC directory on the boot volume |
+| PRG error | Check the reported link, line number, size or unsupported keyword; the current program is preserved |
 | INVALID BASIC TEXT | Check numbering, supported text bytes, line length and total size |
 | FILE COMMANDS REQUIRE DIRECT MODE | Move SAVE/LOAD outside the running program |
 
@@ -69,6 +73,6 @@ After an I/O error, the interpreter remains available. Keep a backup of valuable
 programs using your normal OS tools; the firmware filesystem is not a versioned
 storage service.
 
-Select the matching [character set](Character-sets) before LOAD and RUN. Files
+For text files, select the matching [character set](Character-sets) before LOAD and RUN. Files
 have no encoding metadata and are not UTF-8. CHR$ expressions allow ASCII-only
 source to display extended characters or controls.

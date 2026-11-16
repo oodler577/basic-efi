@@ -21,7 +21,8 @@ transfers. ZoomFloppy is not a mass-storage device or a FAT volume.
 | `IEC STATUS` | Read DOS status channel 15 from the selected drive |
 | `DIR` | Read and display that drive's directory while IEC is selected |
 | `LOAD "HELLO",8` | Read numbered source text from a SEQ file on the selected drive |
-| `SAVE "NAME"` | Rejected while IEC is selected, including after a transfer failure |
+| `LOADPRG "HELLO",8` | Read a tokenized C64 BASIC V2 PRG from the selected drive |
+| `SAVE` / `SAVEPRG` | Rejected while IEC is selected, including after a transfer failure |
 
 These are direct-mode monitor commands. They do not add BASIC OPEN/CLOSE,
 PRINT#/INPUT#, arbitrary DOS commands or a JiffyDOS command interpreter.
@@ -63,14 +64,21 @@ Commodore/OpenCBM workflow to prepare it; this release does not write IEC media.
 Filenames are 1–16 letters, digits, internal spaces, dots, underscores or
 dashes. ASCII lowercase is converted to PETSCII uppercase. Extended PETSCII
 filenames, wildcards, paths, drive selectors inside names and DOS command syntax
-are not accepted. The drive's unit 0 is used (`0:NAME,S,R` or `$0`).
+are not accepted. The drive's unit 0 is used (`0:NAME,S,R`, `0:NAME,P,R` or `$0`).
 
 Text imports use the same 240-character line and 30,000-byte source budget as
 FAT imports. Files are validated completely before the current BASIC program
-is cleared. Binary PRGs, invalid text, missing files and transfer failures
+is cleared. Malformed PRGs, invalid text, missing files and transfer failures
 leave that program intact. Select the matching character set before LOAD/RUN;
 there is no automatic text transcoding. Directory names are displayed through
 a restricted printable conversion so disk bytes cannot issue screen controls.
+
+For a Commodore PRG file use `LOADPRG "HELLO",8`, or `LOAD "HELLO.PRG",8` if
+`.PRG` is part of its actual disk name. PRG reads preserve the two-byte load
+address and select file type P on channel 2. Use `IEC OFF` followed by
+`SAVEPRG "FROMIEC.PRG"` to export it to FAT without losing literal bytes.
+See [C64 tokenized programs](C64-tokenized-programs) for supported keywords and
+validation limits. C64 machine-code games and hardware are not emulated.
 
 ## Failure and recovery
 
@@ -98,14 +106,14 @@ The desktop/POSIX frontend currently reports the IEC transport as unsupported.
   reads, oversized files, every-transfer timeout injection and cancellation.
 - Booted EFI test: real USB_IO enumeration and calling convention with a
   synthetic adapter, invalid descriptors, multiple adapters, removed handles,
-  LOAD/RUN, missing/binary file preservation, timeout/reconnect and FAT export.
+  SEQ/PRG LOAD/RUN, invalid-file preservation, timeout/reconnect and exact FAT export.
 - Tests confirm rejected IEC SAVE never creates a FAT file. Production image
   checks reject mock-adapter code and debug-port instructions.
 - GCC/Clang, ASan/UBSan and a dedicated IEC libFuzzer target run in CI.
 
 Next: record actual adapter/firmware/PC/drive results, refine compatibility,
 then add explicitly enabled SEQ writes with no-overwrite behavior and verified
-disk contents. Tokenized PRG import, C64 game hardware, fastloaders, JiffyDOS
+disk contents. C64 game hardware, fastloaders, JiffyDOS
 timing, IEEE-488, tape, nibbling and firmware flashing remain separate work.
 
 ## References

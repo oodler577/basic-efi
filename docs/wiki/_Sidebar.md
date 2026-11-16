@@ -5,6 +5,7 @@
 - [Booting from USB](Booting-from-USB)
 - [BASIC and screen editing](BASIC-and-screen-editing)
 - [Files and storage](Files-and-storage)
+- [C64 tokenized programs](C64-tokenized-programs)
 - [Character sets](Character-sets)
 - [Virtual video memory](Virtual-video-memory)
 - [Integer widths](Integer-widths)

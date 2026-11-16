@@ -53,8 +53,8 @@ int storage_iec_command(const char *arg){
     }
     screen_text("?USE IEC [ON|OFF|STATUS|DEVICE 8..30]; DIR AND LOAD USE SELECTED STORAGE\r");return 1;
 }
-int storage_iec_read(const char *name,unsigned char *buffer,size_t cap,size_t *length){
-    int e=iec_read_file(&session,device,name,buffer,cap,length);
+int storage_iec_read(const char *name,int prg,unsigned char *buffer,size_t cap,size_t *length){
+    int e=prg?iec_read_program(&session,device,name,buffer,cap,length):iec_read_file(&session,device,name,buffer,cap,length);
     if(e)error(e);
     return e;
 }

@@ -28,6 +28,7 @@ with zipfile.ZipFile(packages[0]) as package:
              if name.startswith(prefix+'usb/') and not name.endswith('/')}
     assert files['EFI/BOOT/BOOTX64.EFI'] == package.read(prefix+'build/BOOTX64.EFI')
     assert 'BASIC/CHARSETS.BAS' in files
+    assert files['BASIC/C64HELLO.PRG'] == package.read(prefix+'programs/C64HELLO.PRG')
     notices = []
     for name in ('LICENSE', 'NOTICE.md', 'vendor/msbasic/LICENSE', 'licenses/chips.txt',
                  'licenses/gnu-efi.txt', 'licenses/x16-rom.md'):
@@ -44,6 +45,9 @@ changing firmware settings, especially on a machine using BitLocker.
 No installation or internal disk changes are required. EXIT returns to firmware.
 
 Try: LOAD "CHARSETS.BAS" then RUN. Press a key between character tables.
+Try: LOAD "C64HELLO.PRG" then RUN. SAVE "COPY.PRG" exports C64 BASIC V2 tokens.
+LOADPRG "NAME" reads a PRG without a .PRG suffix, including on selected IEC drives.
+IEC remains read-only. C64 hardware and machine-code games are not emulated.
 CHARSET ISO, CHARSET PETSCII, CHARSET LOWER select the available fonts.
 HELP lists commands; INFO identifies the active renderer.
 

@@ -18,7 +18,8 @@ files={name:(ROOT/name).read_bytes() for name in names if name and not name.star
 files['usb/EFI/BOOT/BOOTX64.EFI']=(ROOT/'build/BOOTX64.EFI').read_bytes()
 files['build/BOOTX64.EFI']=files['usb/EFI/BOOT/BOOTX64.EFI']
 files['build/basic-efi-usb.img']=image.read_bytes()
-for source in (ROOT/'programs').glob('*.BAS'):files['usb/BASIC/'+source.name]=source.read_bytes()
+for source in sorted([*(ROOT/'programs').glob('*.BAS'),*(ROOT/'programs').glob('*.PRG')]):
+    files['usb/BASIC/'+source.name]=source.read_bytes()
 revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT).decode().strip()
 files['REVISION.txt']=(revision+'\n').encode()
 files['SHA256SUMS']=''.join(hashlib.sha256(data).hexdigest()+'  '+name+'\n' for name,data in sorted(files.items())).encode()

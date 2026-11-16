@@ -22,6 +22,16 @@ static void read_ok(void){
 int main(void){
     connect_mock();read_ok();unsigned calls=mock.calls,cancel_calls=mock.cancel_calls;
     iec_disconnect(&session);assert(!session.connected && mock.shutdowns==1);
+    connect_mock();size_t prg_length;
+    assert(iec_read_program(&session,8,"C64",buffer,sizeof(buffer),&prg_length)==IEC_OK);
+    assert(prg_length==mock.prg_length && !memcmp(buffer,mock.prg,prg_length));
+    assert(!strcmp(mock.filename,"0:C64,P,R") && mock.closed==1);
+    unsigned prg_calls=mock.calls;
+    for(unsigned fail=1;fail<=prg_calls;++fail){
+        connect_mock();mock.fail_at=fail;
+        assert(iec_read_program(&session,8,"C64",buffer,sizeof(buffer),&prg_length)==IEC_TIMEOUT);
+        assert(!prg_length && !session.connected && mock.calls==fail && !mock.bad);
+    }
     for(unsigned version=0;version<=9;++version){
         mock_xum_init(&mock);mock.version=version;IecTransport io=mock_xum_transport(&mock);
         assert(iec_connect(&session,&io)==((version==7||version==8)?IEC_OK:IEC_UNSUPPORTED));
@@ -66,6 +76,8 @@ int main(void){
     connect_mock();assert(iec_read_file(&session,8,"MISSING",buffer,sizeof(buffer),&n)==IEC_DRIVE);
     assert(!n && session.connected && mock.closed==1 && mock.reads==1);
     assert(!strcmp(session.drive_status,"62, FILE NOT FOUND,00,00"));
+    connect_mock();assert(iec_read_program(&session,8,"MISSING",buffer,sizeof(buffer),&n)==IEC_DRIVE);
+    assert(!n && session.connected && mock.closed==1 && mock.reads==1 && !mock.bad);
     for(size_t size=0;size<=257;++size){
         connect_mock();mock.file=large_file;mock.file_length=size;
         memset(buffer,0xa5,sizeof(buffer));
@@ -93,6 +105,6 @@ int main(void){
         connect_mock();assert(!iec_valid_name(invalid[i]));
         assert(iec_read_file(&session,8,invalid[i],buffer,sizeof(buffer),&n)==IEC_BAD_NAME && !mock.calls && !n);
     }
-    puts("PASS: IEC wire protocol, DOS status, SEQ reads, directory bounds, EOF boundaries, cancellation and failure at every USB transfer");
+    puts("PASS: IEC wire protocol, DOS status, SEQ/PRG reads, directory bounds, EOF boundaries, cancellation and failure at every USB transfer");
     return 0;
 }
