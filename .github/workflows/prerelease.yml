@@ -1,0 +1,41 @@
+name: Test release
+on:
+  push:
+    tags: ['v*-test.*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+  publish:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Download the tested build and verify its revision and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --name efi-ubuntu-24.04-q35 --dir incoming
+          python3 tools/prepare_release.py --artifact-dir incoming --tag "$RELEASE_TAG" --revision "$GITHUB_SHA" --output release
+      - name: Publish complete prerelease assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" release/* --verify-tag --draft --prerelease --title "BASIC EFI $RELEASE_TAG" --notes-file docs/TEST-RELEASE.md
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease

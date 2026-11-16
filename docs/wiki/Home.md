@@ -14,6 +14,7 @@ with original Microsoft 6502 BASIC running inside an isolated virtual machine.
 - [Character sets](Character-sets)
 - [Virtual video memory](Virtual-video-memory): text bytes, colors and examples.
 - [Integer widths](Integer-widths): the precise meaning of 8/16/32/64/native.
+- [IEC and ZoomFloppy roadmap](IEC-and-ZoomFloppy-roadmap)
 - [Graphics roadmap](Graphics-roadmap): UEFI framebuffer graphics and the GPU support boundary.
 - [Building and testing](Building-and-testing): local builds, sanitizers, fuzzing and EFI boot tests.
 - [Compatibility and troubleshooting](Compatibility-and-troubleshooting): current limits and common problems.

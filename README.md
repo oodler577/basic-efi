@@ -261,3 +261,11 @@ for details. `python3 tools/package.py` creates a source/boot archive in `dist/`
 
 See `VALIDATION.md` for the tested release and limits, and `NOTICE.md` for
 upstream attribution and the precise interpreter adaptations.
+
+## Test releases
+
+Tags named `vN.N.N-test.N` run the full CI matrix before publishing a prerelease.
+The USB ZIP contains directories ready to copy to a FAT32 stick. The complete
+ZIP also contains source, build tools and a VM image. Release packaging verifies
+that the artifact revision matches the tag and that every package checksum is
+correct. See [Releases](https://github.com/oodler577/basic-efi/releases).
