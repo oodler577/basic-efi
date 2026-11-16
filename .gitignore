@@ -1,0 +1,4 @@
+build/
+vm-state/
+__pycache__/
+*.zip
