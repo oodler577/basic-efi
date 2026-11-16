@@ -85,6 +85,8 @@ int screen_edit(char *line, size_t cap) {
             int pos=screen.y*COLS+screen.x;
             char *cells=&screen.cells[0][0];
             memmove(cells+pos,cells+pos+1,(size_t)(end-pos-1)); cells[end-1]=' ';
+            unsigned char *colors=&screen.color[0][0];
+            memmove(colors+pos,colors+pos+1,(size_t)(end-pos-1)); colors[end-1]=15;
         }
         else if(key==13 || key==10) {
             int first=logical_start(screen.y),last=logical_end(screen.y);

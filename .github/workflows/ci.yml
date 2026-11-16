@@ -1,0 +1,124 @@
+name: Torture CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: basic-efi-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Native ${{ matrix.os }} ${{ matrix.cc }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y cc65 clang
+      - run: python3 tools/check_vendor.py
+      - run: make test CC=${{ matrix.cc }}
+      - run: python3 -m py_compile tools/*.py tests/*.py
+
+  sanitizers:
+    name: Sanitizers ${{ matrix.cc }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y cc65 clang
+      - run: make test-sanitize CC=${{ matrix.cc }}
+
+  fuzz:
+    name: Coverage-guided parser and screen fuzzing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y cc65 clang
+      - run: make fuzz
+      - name: Fuzz private parsers, corrupt virtual program links, and screen editing
+        run: |
+          mkdir -p build/fuzz/core build/fuzz/screen build/crashes
+          cp tests/corpus/core/* build/fuzz/core/
+          cp tests/corpus/screen/* build/fuzz/screen/
+          ./build/fuzz-core -max_total_time=45 -timeout=5 -max_len=32768 -seed=6502 -artifact_prefix=build/crashes/ build/fuzz/core
+          ./build/fuzz-screen -max_total_time=45 -timeout=5 -max_len=4096 -seed=8086 -artifact_prefix=build/crashes/ build/fuzz/screen
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: fuzz-corpus-and-crashes
+          path: |
+            build/fuzz/
+            build/crashes/
+          retention-days: 14
+
+  efi:
+    name: EFI ${{ matrix.os }} ${{ matrix.machine }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            cc: gcc
+            machine: pc
+            cpu: qemu64
+          - os: ubuntu-24.04
+            cc: clang
+            machine: q35
+            cpu: max
+    env:
+      QEMU_MACHINE: ${{ matrix.machine }}
+      QEMU_CPU: ${{ matrix.cpu }}
+      SOURCE_DATE_EPOCH: '1767225600'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y build-essential clang binutils cc65 gnu-efi qemu-system-x86 ovmf dosfstools mtools python3-pil
+      - run: make all build/BOOTTEST.EFI CC=${{ matrix.cc }}
+      - run: python3 tools/check_efi.py build/BOOTX64.EFI
+      - name: Verify EFI rebuild is byte-for-byte reproducible
+        run: |
+          cp build/BOOTX64.EFI build/reference.EFI
+          rm build/*.efi.o build/basic.so build/BOOTX64.EFI
+          make efi CC=${{ matrix.cc }}
+          cmp build/reference.EFI build/BOOTX64.EFI
+      - run: make test-efi CC=${{ matrix.cc }}
+      - name: Package source and bootable artifacts
+        if: matrix.os == 'ubuntu-24.04'
+        run: python3 tools/package.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: efi-${{ matrix.os }}-${{ matrix.machine }}
+          path: |
+            build/*.EFI
+            build/qa/**/*.log
+            build/qa/**/*.png
+            build/qa/**/*.ppm
+            dist/*.zip
+          retention-days: 30
+          if-no-files-found: warn

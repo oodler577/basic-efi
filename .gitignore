@@ -2,3 +2,7 @@ build/
 vm-state/
 __pycache__/
 *.zip
+dist/
+usb/
+/SHA256SUMS
+*.bundle

@@ -4,18 +4,22 @@ EFI_ROOT ?= /usr
 EFI_INC = $(EFI_ROOT)/include/efi
 EFI_LIB = $(EFI_ROOT)/lib
 COMMON = src/core.c src/screen.c
-CFLAGS = -O2 -std=c11 -Wall -Wextra -Werror -Isrc -Ibuild
-EFI_FLAGS = $(CFLAGS) -I$(EFI_INC) -I$(EFI_INC)/x86_64 -I$(EFI_INC)/protocol -ffreestanding -fpic -fshort-wchar -mno-red-zone -fno-stack-protector -fno-strict-aliasing -fno-builtin -DGNU_EFI_USE_MS_ABI -DEFI_BUILD
+CFLAGS ?= -O2 -std=c11 -Wall -Wextra -Werror
+CPPFLAGS += -Isrc -Ibuild
+SANITIZERS ?= address,undefined
+SAN_FLAGS = -O1 -g -std=c11 -Wall -Wextra -Werror -fno-omit-frame-pointer -fsanitize=$(SANITIZERS)
+EFI_FLAGS = $(CFLAGS) $(CPPFLAGS) -I$(EFI_INC) -I$(EFI_INC)/x86_64 -I$(EFI_INC)/protocol -ffreestanding -fpic -fshort-wchar -mno-red-zone -fno-stack-protector -fno-strict-aliasing -fno-builtin -DGNU_EFI_USE_MS_ABI -DEFI_BUILD
 EFI_OBJS = build/core.efi.o build/screen.efi.o build/efi.efi.o build/runtime.efi.o
 
-.PHONY: all rom desktop efi test clean
+.PHONY: all rom desktop efi test test-sanitize test-efi fuzz clean
 all: desktop efi
 rom: build/rom.h
-build/rom.h: vendor/msbasic/m6502-min.s tools/build_rom.py
+build/rom.h: vendor/msbasic/m6502-min.s vendor/msbasic/m6502-cbm.cfg tools/build_rom.py
 	$(PYTHON) tools/build_rom.py
 desktop: build/basic-efi
-build/basic-efi: build/rom.h $(COMMON) src/desktop.c src/basic.h
-	$(CC) $(CFLAGS) $(COMMON) src/desktop.c -o $@
+build/basic-efi: build/rom.h $(COMMON) src/desktop.c src/basic.h vendor/chips/m6502.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(COMMON) src/desktop.c -o $@
+build/core.efi.o: vendor/chips/m6502.h
 build/%.efi.o: src/%.c src/basic.h build/rom.h
 	$(CC) $(EFI_FLAGS) -c $< -o $@
 build/basic.so: $(EFI_OBJS)
@@ -29,7 +33,27 @@ build/BOOTTEST.EFI: build/basic-debug.so
 	objcopy -j .text -j .sdata -j .data -j .rodata -j .dynstr -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64 $< $@
 build/BOOTX64.EFI: build/basic.so
 	objcopy -j .text -j .sdata -j .data -j .rodata -j .dynstr -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64 $< $@
-test: desktop
-	$(PYTHON) tests/test_basic.py
+build/test-screen: tests/test_screen.c src/screen.c src/basic.h
+	mkdir -p build
+	$(CC) $(CFLAGS) $(CPPFLAGS) tests/test_screen.c src/screen.c -o $@
+test: desktop build/test-screen
+	./build/test-screen
+	$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -v
+build/basic-efi-sanitized: build/rom.h $(COMMON) src/desktop.c src/basic.h vendor/chips/m6502.h
+	$(CC) $(SAN_FLAGS) $(CPPFLAGS) $(COMMON) src/desktop.c -o $@
+build/test-screen-sanitized: tests/test_screen.c src/screen.c src/basic.h
+	mkdir -p build
+	$(CC) $(SAN_FLAGS) $(CPPFLAGS) tests/test_screen.c src/screen.c -o $@
+test-sanitize: build/basic-efi-sanitized build/test-screen-sanitized
+	./build/test-screen-sanitized
+	BASIC_BINARY=$(CURDIR)/build/basic-efi-sanitized $(PYTHON) -m unittest discover -s tests -p 'test_*.py' -v
+build/fuzz-core: tests/fuzz_core.c build/rom.h $(COMMON) src/basic.h
+	clang $(SAN_FLAGS) $(CPPFLAGS) -fsanitize=fuzzer tests/fuzz_core.c src/screen.c -o $@
+build/fuzz-screen: tests/fuzz_screen.c src/screen.c src/basic.h
+	mkdir -p build
+	clang $(SAN_FLAGS) $(CPPFLAGS) -fsanitize=fuzzer tests/fuzz_screen.c src/screen.c -o $@
+fuzz: build/fuzz-core build/fuzz-screen
+test-efi: efi build/BOOTTEST.EFI
+	$(PYTHON) tests/run_efi_tests.py
 clean:
 	rm -rf build

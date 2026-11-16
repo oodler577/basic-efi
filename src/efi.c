@@ -128,11 +128,13 @@ EFI_STATUS efi_main(EFI_HANDLE image,EFI_SYSTEM_TABLE *system){
        !EFI_ERROR(bs->HandleProtocol(loaded->DeviceHandle,&FileSystemProtocol,(VOID**)&fs))&&
        !EFI_ERROR(fs->OpenVolume(fs,&root))){
         /* Only the image's own volume, existing BASIC directory, no device enumeration. */
-        root->Open(root,&basic_dir,L"BASIC",EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE,EFI_FILE_DIRECTORY);
+        EFI_STATUS opened=root->Open(root,&basic_dir,L"BASIC",EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE,EFI_FILE_DIRECTORY);
+        if(EFI_ERROR(opened))root->Open(root,&basic_dir,L"BASIC",EFI_FILE_MODE_READ,EFI_FILE_DIRECTORY);
         root->Close(root);
     }
     basic_run();if(basic_dir)basic_dir->Close(basic_dir);
     st->ConOut->SetMode(st->ConOut,(UINTN)original_mode);
     st->ConOut->SetAttribute(st->ConOut,EFI_LIGHTGRAY);st->ConOut->ClearScreen(st->ConOut);
+    const char *done="BASIC EFI EXIT RETURN\n";while(*done)platform_trace(*done++);
     return EFI_SUCCESS;
 }

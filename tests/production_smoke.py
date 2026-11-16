@@ -13,14 +13,14 @@ vm.start()
 qmp, proc, build = vm.qmp, vm.proc, vm.BUILD
 try:
     vm.read_json(); qmp('qmp_capabilities')
-    time.sleep(10)
+    vm.wait_for_blue_screen()
     qmp('screendump', {'filename': str(build/'production-boot.ppm')})
     for line in ['10 PRINT "PRODUCTION BUILD"', 'SAVE "PROD.BAS"', 'RUN']:
         vm.type_line(line)
     time.sleep(1)
     qmp('screendump', {'filename': str(build/'production-run.ppm')})
     vm.type_line('EXIT')
-    time.sleep(3)
+    vm.assert_firmware_return()
     qmp('screendump', {'filename': str(build/'production-exit.ppm')})
 finally:
     if proc.poll() is None:
