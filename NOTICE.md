@@ -34,6 +34,20 @@ arithmetic implementation is retained. No downloaded C64 ROM image is included.
 - File: `vendor/chips/m6502.h`, unchanged.
 - License: zlib, included in that file and copied to `licenses/chips.txt`.
 
+## Commander X16 character sets
+
+- Source: https://github.com/X16Community/x16-rom/tree/fbe32a60704f555c0515fe8d3cb76857eb56d670/charset
+- PETSCII source blob: `56fed75a5aaba6873a4d2b5e222de5065c05ff7c`.
+- ISO-8859-15 source blob: `4f6a3cadb488106bf12d52ed5b5710b6a925b71a`.
+- Upstream explicitly lists PETSCII and ISO (PXLfont) charsets as public domain;
+  its unmodified license statement is retained in `licenses/x16-rom.md`.
+
+The two charset source files are retained byte-for-byte. `tools/build_fonts.py`
+extracts their `.byte` values into C arrays. PET upper/graphics and upper/lower
+are each 128 glyphs; the renderer synthesizes their inverse halves. ISO uses all
+256 supplied glyphs, including the X16 logo at 173. No X16 KERNAL or BASIC code
+is included. The terminal/firmware-text Unicode approximations are ours.
+
 ## GNU EFI
 
 The EFI executable links GNU EFI initialization and support code. The build

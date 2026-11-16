@@ -18,7 +18,8 @@ not an implementation of a Commodore serial bus or selectable disk unit.
 
 ## File format
 
-Programs are ordinary printable ASCII text, one numbered BASIC line per text
+Programs are byte-oriented text (ASCII plus bytes 160–255 in quoted strings),
+one numbered BASIC line per text
 line, with LF or CRLF endings. SAVE expands tokens back to readable text.
 Tokenized PRG files, D64 disk images and JiffyDOS commands are not supported.
 
@@ -57,9 +58,13 @@ or search other volumes.
 | FILE NOT FOUND | Check DIR and spelling |
 | FILE I/O ERROR | Check write protection, media availability and filesystem health |
 | BASIC FOLDER UNAVAILABLE | Put a BASIC directory on the boot volume |
-| INVALID BASIC TEXT | Check numbering, printable ASCII, line length and total size |
+| INVALID BASIC TEXT | Check numbering, supported text bytes, line length and total size |
 | FILE COMMANDS REQUIRE DIRECT MODE | Move SAVE/LOAD outside the running program |
 
 After an I/O error, the interpreter remains available. Keep a backup of valuable
 programs using your normal OS tools; the firmware filesystem is not a versioned
 storage service.
+
+Select the matching [character set](Character-sets) before LOAD and RUN. Files
+have no encoding metadata and are not UTF-8. CHR$ expressions allow ASCII-only
+source to display extended characters or controls.

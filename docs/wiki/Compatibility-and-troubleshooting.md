@@ -17,7 +17,7 @@ an 8-bit or 16-bit host.
 | SAVE says FILE EXISTS | Pick a new filename; overwrites are deliberately refused |
 | Boot returns immediately | Confirm firmware text-console support and read any displayed error |
 | Program hangs | Esc to break; F9 if virtual BASIC memory was corrupted |
-| Text looks small or centered | Firmware owns the current font and console geometry; GOP rendering is planned |
+| Text looks small or centered | Run INFO: GOP scales 8x8 glyphs to fit; firmware-text fallback still owns font size |
 | C64 game will not load | No C64 KERNAL, VIC-II, SID, disk-image or machine-code game compatibility |
 | Large integer loses precision in PRINT | PRINT uses classic BASIC arithmetic; use CALC for exact-width integers |
 | Long program disappeared from screen | LIST it; display scrolling does not erase stored program memory |

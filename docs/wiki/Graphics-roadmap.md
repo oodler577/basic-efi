@@ -1,22 +1,21 @@
 # Graphics roadmap
 
-**Planned, not implemented:** render the stable virtual display through UEFI's
-Graphics Output Protocol (GOP).
+**Implemented:** X16 bitmap fonts, a software text renderer, a consistent palette,
+and 1x–4x integer scaling through UEFI Graphics Output Protocol (GOP) blits.
+See [Character sets](Character-sets) for commands and cell sizes.
 
-The current EFI frontend uses the firmware text console. GOP offers a standard
-way to query graphics modes and draw pixels before an OS boots. That is a
-manageable route to more interesting graphics without maintaining native GPU
-drivers for each vendor and generation.
+The backend uses GOP's standard blit pixel format; firmware handles its physical
+framebuffer format, row stride and PixelBltOnly modes. BASIC EFI does not write
+native framebuffer addresses. An unavailable or failing GOP falls back to the
+firmware text console. INFO reports which backend is active.
 
-## Proposed sequence
+## Next steps
 
-1. A software renderer with a licensed bitmap font, palette and integer scaling.
-2. A GOP backend that validates dimensions, stride, framebuffer size and pixel
-   format. Support firmware blits where direct framebuffer access is unavailable.
-3. Keep the current text console as a fallback. Report the selected backend in INFO.
-4. Design separate virtual bitmap/sprite memory and simple drawing operations.
-   Test clipping, overlap, transparency, bounds and scrolling against an independent
-   in-memory reference renderer before booting it in EFI.
+Separate virtual bitmap/sprite memory and drawing operations can build on this
+renderer. Test clipping, overlap, transparency, bounds and scrolling against an
+independent in-memory reference before adding new graphics capabilities. Direct
+framebuffer writes, if later needed for speed, would require explicit checks of
+stride, allocation size and pixel format; they are not part of the current path.
 
 This preserves existing text/color PEEK/POKE addresses. BASIC programs should
 describe the virtual machine rather than depend on PCI addresses or a particular
@@ -29,7 +28,7 @@ GPU's memory layout.
 | Custom font and scalable text | CPU rendering into a firmware-provided surface |
 | Pixels, lines, rectangles and software sprites | Portable software graphics |
 | Different color layouts and padded scanlines | Explicit conversion and stride tests |
-| Direct framebuffer unavailable | GOP blit fallback |
+| All graphics output | GOP blits, without direct framebuffer access |
 | Arbitrary GPU VRAM allocation | Outside this plan |
 | Hardware 2D/3D acceleration or shaders | Separate vendor-driver project |
 | GPU reset, power management, hot-plug | Outside this small EFI application's scope |

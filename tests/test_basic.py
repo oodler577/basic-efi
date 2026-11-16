@@ -30,6 +30,21 @@ class BasicTests(unittest.TestCase):
         self.assertIn('Mixed case',out)
         saved=(self.folder/'ROUND.BAS').read_text()
         self.assertEqual(saved,program+'\n')
+    def test_extended_quoted_text_roundtrip(self):
+        for mode in (b'ISO',b'PETSCII',b'LOWER'):
+            name=mode.decode()+'.BAS'
+            program=b'10 PRINT "'+bytes(range(160,256))+b'"'
+            (self.folder/'SOURCE.BAS').write_bytes(program+b'\n')
+            commands=b'CHARSET '+mode+b'\nLOAD "SOURCE.BAS"\nSAVE "'+name.encode()+b'"\nNEW\nLOAD "'+name.encode()+b'"\nRUN\nEXIT\n'
+            p=subprocess.run([str(BINARY),str(self.folder)],input=commands,capture_output=True,timeout=15)
+            self.assertEqual(p.returncode,0,p.stderr)
+            self.assertIn(bytes(range(160,256)),p.stdout)
+            self.assertEqual((self.folder/name).read_bytes(),program+b'\n')
+    def test_character_modes_keep_program(self):
+        out=self.run_basic('10 PRINT 6*7\nCHARSET PETSCII\nPOKE 32768,129\nPRINT PEEK(32768)\nCHARSET LOWER\nRUN\nCHARSET ISO\nRUN')
+        self.assertEqual(out.count(' 42 '),2)
+        self.assertIn(' 129 ',out)
+        self.assertNotIn('ERROR',out)
     def test_no_clobber(self):
         (self.folder/'KEEP.BAS').write_text('10 PRINT "KEEP"\n')
         out=self.run_basic('10 PRINT "OTHER"\nSAVE "KEEP.BAS"')
@@ -59,6 +74,10 @@ class BasicTests(unittest.TestCase):
     def test_get_character(self):
         out=self.run_basic('10 GET A$\n20 PRINT A$\nRUN\nZ')
         self.assertIn('Z',out)
+    def test_get_extended_byte(self):
+        p=subprocess.run([str(BINARY),str(self.folder)],input=b'10 GET A$\n20 PRINT ASC(A$)\nRUN\n\xe9EXIT\n',capture_output=True,timeout=15)
+        self.assertEqual(p.returncode,0,p.stderr)
+        self.assertIn(b' 233 ',p.stdout)
     def test_integer_widths_and_unsigned_64(self):
         out=self.run_basic('BITS 8\nCALC 255+1\nCALC 128\nBITS 16\nCALC $FFFF+2\nBITS 32\nCALC $FFFFFFFF+1\nBITS 64\nCALC 18446744073709551615\nCALC (1<<63)+1\nCALC 1/0\nCALC 1<<64\nPRINT 300')
         for s in ['UNSIGNED 0  SIGNED 0  HEX $00','UNSIGNED 128  SIGNED -128','HEX $0001','HEX $00000000','UNSIGNED 18446744073709551615  SIGNED -1','HEX $8000000000000001',' 300 ']:self.assertIn(s,out)

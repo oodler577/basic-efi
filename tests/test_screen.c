@@ -13,7 +13,7 @@ void platform_draw(void){
     ++checks;
 }
 int platform_key(int wait){(void)wait;return position<count?keys[position++]:KEY_EXIT;}
-static void begin(void){screen_clear();count=position=0;}
+static void begin(void){screen_charset(CHARSET_ISO);screen.ink=15;screen_clear();count=position=0;}
 static void key(int k){assert(count<sizeof(keys)/sizeof(keys[0]));keys[count++]=k;}
 static void text(const char *s){while(*s)key((unsigned char)*s++);}
 static void expect(const char *wanted){
@@ -43,6 +43,12 @@ int main(void){
     screen_set_color(0,1);screen_set_color(1,2);screen_set_color(2,3);
     key(KEY_DELETE);key(13);expect("BC");assert(screen.color[0][0]==2&&screen.color[0][1]==3);
     begin();screen_set_cell(COLS*ROWS,88);screen_set_color(COLS*ROWS,5);assert(screen.cells[0][0]==' ');
+    begin();screen_charset(CHARSET_PET);text("10 PRINT ");key(34);key(211);key(34);key(13);
+    expect("10 PRINT \"\xd3\"");
+    begin();screen_charset(CHARSET_PET);screen_put(18);text("PRINT 1");key(13);expect("PRINT 1");
+    begin();text("10 PRINT ");key(34);key(233);key(164);key(34);key(13);
+    expect("10 PRINT \"\xe9\xa4\"");
+    begin();
     /* Scroll cell and color data together, exercising the bottom edge repeatedly. */
     for(unsigned i=0;i<10000;++i){
         unsigned row=(unsigned)screen.y;

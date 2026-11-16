@@ -73,3 +73,7 @@ examples, not test-created programs or diagnostic screenshots.
 The package has SHA-256 checksums and a source revision. Image creation is atomic:
 a failed external tool leaves an existing output image intact. `--force` is
 required to replace an image, and device/symlink targets are rejected.
+
+Character tests cover all 256 glyphs in all three modes at scales 1–4, bounds,
+reverse video and controls. The EFI suite independently compares every visible
+pixel in the three 256-glyph tables to the pinned X16 source data.

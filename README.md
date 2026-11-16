@@ -19,7 +19,9 @@ Start with the included VM image. Physical firmware compatibility has not been t
   an earlier visible line, edit it, and press Enter to submit that line again.
   Program storage survives display scrolling. Logical lines may wrap to 240 characters.
 - A virtual text framebuffer and 16 color values, accessed with PEEK/POKE.
-- ASCII program SAVE/LOAD in the `BASIC` directory of the volume containing the
+- X16 PETSCII graphics, PETSCII lower/upper and ISO-8859-15 fonts, with GOP
+  rendering at 1x–4x integer scale. Select using `CHARSET ISO|PETSCII|LOWER`.
+- Byte-oriented text program SAVE/LOAD in the `BASIC` directory of the volume containing the
   EFI application. A USB stick works when its filesystem is exposed by the firmware.
 - An exact-width integer workbench with 8, 16, 32, 64 and native-width modes.
 - Esc to interrupt a running program, F9 to reset the virtual machine, EXIT to
@@ -109,8 +111,10 @@ not a selectable hardware drive. Filenames may contain letters, digits, dots,
 underscores and hyphens, up to 64 characters. Paths and dot-prefixed names are
 rejected. Use a new filename when saving a revised version.
 
-Programs use printable ASCII, one numbered line per text line, with CRLF or LF
-endings. Import accepts line numbers 0–63999 and at most 240 characters per
+Programs use byte-oriented text, one numbered line per text line, with CRLF or LF
+endings. ASCII is supported, plus bytes 160–255 inside quoted strings. Choose the
+matching charset before loading: these are not UTF-8 files and have no encoding
+metadata. Use CHR$ expressions to keep source portable and ASCII-only. Import accepts line numbers 0–63999 and at most 240 characters per
 line. It uses a conservative 30,000-byte storage budget before tokenization;
 oversized or structurally invalid imports leave the existing program intact.
 LOAD does not automatically RUN. SAVE exports text, not tokenized PRG files.
@@ -137,18 +141,23 @@ PRINT#/INPUT#, TI/TI$, or physical peripheral access.
 
 There is no shell-style command history or scrollback editor. To re-edit a
 stored line that has scrolled away, LIST it first. Cursor editing uses overwrite
-mode, not insert mode. Text is ASCII rendered with the firmware's font and color
-palette, so this is a Commodore-inspired environment rather than a pixel-exact C64.
+mode, not insert mode. The EFI GOP renderer uses the actual X16 8x8 bitmap fonts
+and a consistent 16-color palette. It scales to 16x16 cells at a 1280x800 firmware
+resolution and 24x24 cells at 1920x1080, with a 4x cap. INFO reports the selected
+backend. Firmware-text fallback and the desktop terminal approximate some glyphs.
+See [Character sets](https://github.com/oodler577/basic-efi/wiki/Character-sets)
+for modes, control codes, input and file-encoding details.
 
 | Virtual address | Meaning |
 |---|---|
 | `$0401` through below `$8000` | Original BASIC workspace; 31,743 bytes reported at startup |
-| `$8000` / 32768, length 1920 | 80 × 24 printable ASCII screen cells |
+| `$8000` / 32768, length 1920 | 80 × 24 raw screen codes; ISO byte or Commodore PET screen code |
 | `$9000` / 36864, length 1920 | Color cells; only the low four bits are used |
 | `$C000` onward | BASIC ROM, protected against emulated writes |
 
-For example, `POKE 32768,65` writes an A in the top-left cell and
-`POKE 36864,5` changes its color. Screen output can subsequently overwrite it.
+In ISO mode, `POKE 32768,65` writes an A in the top-left cell and
+`POKE 36864,5` changes its color. PETSCII mode uses screen code 1 for A.
+`LOAD "CHARSETS.BAS"` then `RUN` displays all three glyph tables. Screen output can subsequently overwrite it.
 PEEK and POKE operate only on the emulated machine. They do not expose host RAM,
 physical disk controllers, UEFI pointers or native x86 I/O ports.
 

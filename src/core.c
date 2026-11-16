@@ -21,7 +21,10 @@ static int same(const char *a,const char *b) {return strcmp(a,b)==0;}
 static char upper(char c) {return c>='a' && c<='z'?(char)(c-'a'+'A'):c;}
 static void normalize(char *s) {
     int quoted=0;
-    for(;*s;++s) {if(*s=='"') quoted=!quoted; else if(!quoted)*s=upper(*s);}
+    for(;*s;++s) {if(*s=='"') quoted=!quoted; else if(!quoted){
+        if(screen.charset==CHARSET_ISO)*s=upper(*s);
+        else if((unsigned char)*s>=193 && (unsigned char)*s<=218)*s=(char)((unsigned char)*s-128);
+    }}
 }
 static void decimal(uint64_t value,char *out) {
     char temp[21];int n=0;
@@ -88,7 +91,7 @@ static int export_program(size_t *length) {
                     if(same(tokens[c-128],"DATA"))data=1;
                 }
             }else {
-                if(c<32 || c>126 || used+1>=FILE_CAPACITY)return 0;
+                if(c<32 || (c>126 && !(quoted && c>=160)) || used+1>=FILE_CAPACITY)return 0;
                 filebuf[used++]=c;
             }
         }
@@ -100,8 +103,11 @@ static int export_program(size_t *length) {
 static int validate_source(size_t n) {
     size_t p=0,stored=2;
     while(p<n) {
+        int quoted=0;
         size_t start=p;while(p<n && filebuf[p]!='\n' && filebuf[p]!='\r') {
-            if(filebuf[p]<32 || filebuf[p]>126)return 0;
+            unsigned char c=filebuf[p];
+            if(c=='"')quoted=!quoted;
+            if(c<32 || (c>126 && !(quoted && c>=160)))return 0;
             ++p;
         }
         if(p-start>LINE_MAXIMUM)return 0;
@@ -179,17 +185,31 @@ static int monitor(char *line) {
     if(same(p,"HELP")) {
         screen_text("MS BASIC: numbered lines, LIST, RUN, NEW, PRINT, INPUT, PEEK, POKE.\r"
                     "Arrow keys edit the visible screen. Enter submits that logical line.\r"
-                    "SAVE/LOAD \"NAME.BAS\" : ASCII programs in the BASIC folder; direct mode.\r"
+                    "SAVE/LOAD \"NAME.BAS\" : 8-bit text programs in the BASIC folder; direct mode.\r"
                     "DIR  CLS  RESET  EXIT  INFO. Esc stops RUN; F9 resets BASIC.\r"
                     "BITS 8|16|32|64|NATIVE, CALC expression: separate integer workbench.\r"
                     "BASIC keeps its original floating-point arithmetic in every BITS mode.\r"
+                    "CHARSET ISO|PETSCII|LOWER : select X16 character set.\r"
                     "Virtual screen: POKE 32768,65; colors start at 36864 (0-15).\r");return 1;
     }
     if(same(p,"INFO")) {
         screen_text("BASIC EFI 0.1 / ORIGINAL MICROSOFT 6502 BASIC 1.1\r"
                     "64 KiB virtual machine; original BASIC workspace below $8000.\r"
-                    "80x24 editable ASCII screen; no C64 hardware or game emulation.\r"
-                    "File access: BASIC folder on boot volume (desktop: selected folder).\r");return 1;
+                    "80x24 editable ISO/PETSCII screen; no C64 hardware or game emulation.\r"
+                    "File access: BASIC folder on boot volume (desktop: selected folder).\r");
+        platform_info();return 1;
+    }
+    if(!strncmp(p,"CHARSET",7) && (p[7]==0 || p[7]==' ')) {
+        p+=7;while(*p==' ')++p;
+        unsigned set=screen.charset;
+        if(*p){
+            if(same(p,"ISO"))set=CHARSET_ISO;
+            else if(same(p,"PETSCII"))set=CHARSET_PET;
+            else if(same(p,"LOWER"))set=CHARSET_PET_LOWER;
+            else {screen_text("?USE CHARSET ISO, PETSCII OR LOWER\r");return 1;}
+            screen_charset(set);screen_clear();
+        }
+        screen_text("CHARSET ");screen_text(charset_name(set));screen_text("\r");return 1;
     }
     if(same(p,"EXIT")){exiting=1;return 1;}
     if(same(p,"CLS")){screen_clear();return 1;}
@@ -218,7 +238,7 @@ static int monitor(char *line) {
         }else {
             int e=platform_read(name,filebuf,sizeof(filebuf),&n);
             if(e)storage_error(e);
-            else if(!validate_source(n))screen_text("?INVALID BASIC TEXT (NUMBERED ASCII; 240 CHARS/LINE; 30000 BYTE BUDGET)\r");
+            else if(!validate_source(n))screen_text("?INVALID BASIC TEXT (NUMBERED 8-BIT TEXT; 240 CHARS/LINE; 30000 BYTE BUDGET)\r");
             else {loading=1;load_new=1;load_pos=0;load_len=n;screen_text("LOADING\r");}
         }
         return 1;
@@ -290,7 +310,7 @@ static void trap(unsigned address) {
         if(key==KEY_ESCAPE)break_requested=1;
         if(key==KEY_RESET)reset_requested=1;
         if(key==KEY_EXIT)exiting=1;
-        unsigned c=key>0 && key<128?(unsigned)key:0;
+        unsigned c=key>0 && key<256?(unsigned)key:0;
         m6502_set_a(&cpu,(uint8_t)c);
         m6502_set_p(&cpu,(uint8_t)((m6502_p(&cpu)&~(M6502_ZF|M6502_NF))|(c?0:M6502_ZF)));
     }
@@ -315,7 +335,7 @@ int basic_run(void) {
         if(pins&M6502_RW) {
             unsigned char value=memory[address];
             if(address>=0x8000 && address<0x8000+COLS*ROWS)value=(unsigned char)screen.cells[(address-0x8000)/COLS][(address-0x8000)%COLS];
-            if(address>=0x9000 && address<0x9000+COLS*ROWS)value=screen.color[(address-0x9000)/COLS][(address-0x9000)%COLS];
+            if(address>=0x9000 && address<0x9000+COLS*ROWS)value=screen.color[(address-0x9000)/COLS][(address-0x9000)%COLS]&15;
             M6502_SET_DATA(pins,value);
         }else if(address<0xc000) {
             unsigned char value=M6502_GET_DATA(pins);memory[address]=value;

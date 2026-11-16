@@ -18,6 +18,13 @@ static volatile sig_atomic_t interrupted;
 static void on_signal(int n){(void)n;interrupted=1;}
 static void restore(void){if(interactive){tcsetattr(0,TCSAFLUSH,&original);fputs("\033[0m\033[?25h\033[?1049l",stdout);}}
 void platform_trace(int c){if(!interactive){if(c==13)c=10;fputc(c,stdout);fflush(stdout);}}
+static void put_unicode(uint32_t c){
+    if(c<128)fputc((int)c,stdout);
+    else if(c<2048){fputc(192|(c>>6),stdout);fputc(128|(c&63),stdout);}
+    else if(c<65536){fputc(224|(c>>12),stdout);fputc(128|((c>>6)&63),stdout);fputc(128|(c&63),stdout);}
+    else {fputc(240|(c>>18),stdout);fputc(128|((c>>12)&63),stdout);fputc(128|((c>>6)&63),stdout);fputc(128|(c&63),stdout);}
+}
+void platform_info(void){screen_text("DISPLAY: TERMINAL; ISO UNICODE / APPROXIMATE PETSCII GLYPHS\r");}
 void platform_draw(void){
     if(!interactive || !screen.dirty)return;
     fputs("\033[?25l\033[44m\033[97m\033[H",stdout);
@@ -27,10 +34,12 @@ void platform_draw(void){
         for(int x=0;x<COLS;++x){
             int next=ansi_colors[screen.color[y][x]&15];
             if(next!=color){printf("\033[%dm",next);color=next;}
-            fputc(screen.cells[y][x],stdout);
+            int reverse=(screen.color[y][x]&128) || (screen.charset!=CHARSET_ISO && (screen.cells[y][x]&128));
+            printf("\033[%dm",reverse?7:27);
+            put_unicode(charset_unicode(screen.charset,screen.cells[y][x]));
         }
     }
-    printf("\033[25;1H\033[36m  BASIC EFI 0.1  |  F9 RESET  |  ESC BREAK  |  HELP  |  EXIT\033[K");
+    printf("\033[27m\033[25;1H\033[36m  BASIC EFI 0.1  |  F9 RESET  |  ESC BREAK  |  HELP  |  EXIT\033[K");
     printf("\033[%d;%dH\033[97m\033[?25h",screen.y+1,screen.x+1);fflush(stdout);screen.dirty=0;
 }
 static int ready(int us){fd_set f;FD_ZERO(&f);FD_SET(0,&f);struct timeval t={0,us};return select(1,&f,0,0,&t)>0;}
@@ -38,7 +47,22 @@ static int readkey(void){
     unsigned char c;if(read(0,&c,1)!=1)return KEY_EXIT;
     if(c==3)return KEY_ESCAPE;
     if(c==4)return KEY_EXIT;
-    if(c!=27)return c;
+    if(c!=27){
+        /* Batch input is bytes in the selected encoding; terminals supply UTF-8. */
+        if(!interactive)return c;
+        uint32_t u=c;
+        if(c>=128){
+            unsigned n=c>=0xc2&&c<=0xdf?1:c>=0xe0&&c<=0xef?2:c>=0xf0&&c<=0xf4?3:0;
+            if(!n)return 0;
+            u=c&((1u<<(6-n))-1);
+            for(unsigned i=0;i<n;++i){
+                if(!ready(30000)||read(0,&c,1)!=1 || (c&192)!=128)return 0;
+                u=(u<<6)|(c&63);
+            }
+            if((n==1&&u<128)||(n==2&&u<2048)||(n==3&&u<65536)||u>0x10ffff||(u>=0xd800&&u<=0xdfff))return 0;
+        }
+        return charset_input(screen.charset,u);
+    }
     if(!ready(30000))return KEY_ESCAPE;
     if(read(0,&c,1)!=1)return KEY_ESCAPE;
     if(c!='['&&c!='O')return KEY_ESCAPE;

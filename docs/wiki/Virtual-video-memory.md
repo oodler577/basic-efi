@@ -17,13 +17,15 @@ POKE 32768+Y*80+X,65
 POKE 36864+Y*80+X,5
 ```
 
-This writes an ASCII A and sets its color. `PRINT PEEK(32768+Y*80+X)` reads the
+In ISO mode this writes an A and sets its color. `PRINT PEEK(32768+Y*80+X)` reads the
 current visible byte. Screen output and scrolling modify the same virtual cells,
 so a subsequent PRINT or scroll may replace your drawing.
 
-Only printable ASCII is rendered as a cell character; unsupported values appear
-as spaces. Color values use their low four bits. The palette is an approximation
-mapped to firmware console colors, not the exact C64 palette.
+All 256 screen codes are retained and rendered. ISO codes index the X16 ISO font;
+PET modes use Commodore screen codes (A is 1; reverse A is 129), distinct from
+PRINT's PETSCII bytes. Color RAM exposes the low four bits, with a consistent
+16-color palette in GOP and approximate firmware colors in text fallback.
+See [Character sets](Character-sets) for mappings and reverse-video behavior.
 
 ## Example
 
@@ -35,14 +37,12 @@ mapped to firmware console colors, not the exact C64 palette.
 50 NEXT X
 ```
 
-This fills the top row with colored letters. The supplied `SCREEN.BAS` adds an
+In ISO mode this fills the top row with colored letters. The supplied `SCREEN.BAS` adds an
 explanatory message. The control character produced by `CHR$(147)` clears the
-screen; this is one of the small set of Commodore-style display controls supplied
-by the host, not a complete PETSCII implementation.
+screen. The host implements a documented subset of Commodore/X16 display controls.
 
 ## Future graphics
 
-The text/color memory contract can remain stable when the renderer moves from
-firmware text output to a pixel framebuffer. That would permit custom fonts,
-scaling and a consistent palette. Separate virtual bitmap and sprite storage
+The renderer now draws X16 bitmap glyphs through GOP blits, with integer scaling
+and a consistent palette. Separate virtual bitmap and sprite storage
 can be designed later without exposing host pointers. See [Graphics roadmap](Graphics-roadmap).

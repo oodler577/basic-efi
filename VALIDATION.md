@@ -1,6 +1,23 @@
 # BASIC EFI 0.1 validation — November 16, 2026
 
-## Hardening milestone
+## X16 character-set milestone
+
+The native suite now has 33 Python tests plus screen and character/renderer C
+harnesses. ISO quoted bytes 160–255 and both PET modes round-trip through text
+files. Charset switches preserve BASIC programs. The renderer harness covers
+all 3 x 256 glyphs at each scale 1–4, buffer guards, reverse video and controls.
+
+Five local real-EFI scenarios pass, including a new glyph-table test which
+compares every displayed pixel of all 256 glyphs in all three modes against the
+independently parsed upstream X16 font data. In OVMF at 1280x800, the actual
+cells are 16x16 pixels. The physical-hardware caveat still applies. Hosted CI
+repeats these checks for both EFI matrix entries.
+
+GOP output uses firmware blits, without direct framebuffer pointer arithmetic.
+Firmware text and terminal fallbacks approximate glyphs. The full X16 keyboard
+layout and complete KERNAL control-code semantics are not implemented.
+
+## Earlier hardening milestone
 
 The expanded suite now has 30 Python tests, plus a C screen harness performing
 10,000 scrolls and 200,000 seeded edit events. It includes 2,400 integer

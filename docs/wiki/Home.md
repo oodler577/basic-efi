@@ -11,6 +11,7 @@ with original Microsoft 6502 BASIC running inside an isolated virtual machine.
 - [Booting from USB](Booting-from-USB): file layout, one-time boot, Secure Boot and exit.
 - [BASIC and screen editing](BASIC-and-screen-editing): how numbered programs and the editable display work.
 - [Files and storage](Files-and-storage): SAVE, LOAD, DIR, file format and error recovery.
+- [Character sets](Character-sets)
 - [Virtual video memory](Virtual-video-memory): text bytes, colors and examples.
 - [Integer widths](Integer-widths): the precise meaning of 8/16/32/64/native.
 - [Graphics roadmap](Graphics-roadmap): UEFI framebuffer graphics and the GPU support boundary.

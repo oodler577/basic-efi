@@ -6,6 +6,7 @@ int platform_key(int wait){(void)wait;return KEY_EXIT;}
 int platform_read(const char *n,unsigned char *b,size_t c,size_t *l){(void)n;(void)b;(void)c;(void)l;return 1;}
 int platform_write(const char *n,const unsigned char *b,size_t l){(void)n;(void)b;(void)l;return 0;}
 void platform_directory(void){}
+void platform_info(void){}
 void platform_idle(void){}
 int LLVMFuzzerTestOneInput(const uint8_t *data,size_t size){
     if(size>32768)return 0;
