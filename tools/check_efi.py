@@ -16,13 +16,21 @@ def check(path,production=True):
     assert u16(optional)==0x20b,'not PE32+'
     assert u16(optional+68)==10,'not an EFI application'
     header_size=u32(optional+60);entry=u32(optional+16)
-    count=u16(pe+6);table=optional+u16(pe+20);sections=[]
+    count=u16(pe+6);table=optional+u16(pe+20);sections=[];contents={}
     for i in range(count):
         at=table+i*40;name=data[at:at+8].rstrip(b'\0').decode()
         virtual_size,rva,raw_size,offset=struct.unpack_from('<IIII',data,at+8)
         assert rva>=header_size,f'{name} overlaps the PE header (RVA {rva:#x})'
         assert offset+raw_size<=len(data),f'{name} exceeds file'
         sections.append((name,rva,max(virtual_size,raw_size)))
+        contents[name]=data[offset:offset+virtual_size]
+    # Freestanding EFI has no dynamic loader to resolve host libc helpers.
+    symbols=contents.get('.dynsym',b'');strings=contents.get('.dynstr',b'')
+    for at in range(24,len(symbols)-23,24):
+        name,info,other,section,value,size=struct.unpack_from('<IBBHQQ',symbols,at)
+        if name and section==0:
+            symbol=strings[name:].split(b'\0',1)[0].decode(errors='replace')
+            raise AssertionError('unresolved ELF symbol in EFI image: '+symbol)
     assert any(name=='.text' and rva<=entry<rva+size for name,rva,size in sections),'entry outside code'
     assert any(name=='.reloc' for name,_,_ in sections),'missing relocation section'
     assert b'MICROSOFT 6502 BASIC 1.1' in data,'missing BASIC ROM data'

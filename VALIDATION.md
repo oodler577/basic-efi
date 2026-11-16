@@ -1,5 +1,15 @@
 # BASIC EFI 0.1 validation — November 16, 2026
 
+## Freestanding runtime fix
+
+The first graphics release candidate exposed Ubuntu 22.04's injected
+`__memcpy_chk` dependency in EFI's status-line rendering. EFI has no Linux
+runtime to resolve it. EFI builds now explicitly disable libc fortification,
+link with `--no-undefined`, and check the PE image's ELF dynamic-symbol records
+for unresolved symbols. The new image check rejects the captured failing CI
+binary before boot. The failed test tag is retained; corrected candidates use
+a new tag rather than changing the identity of an existing one.
+
 ## X16 character-set milestone
 
 The native suite now has 33 Python tests plus screen and character/renderer C

@@ -9,7 +9,7 @@ CFLAGS ?= -O2 -std=c11 -Wall -Wextra -Werror
 CPPFLAGS += -Isrc -Ibuild
 SANITIZERS ?= address,undefined
 SAN_FLAGS = -O1 -g -std=c11 -Wall -Wextra -Werror -fno-omit-frame-pointer -fsanitize=$(SANITIZERS)
-EFI_FLAGS = $(CFLAGS) $(CPPFLAGS) -I$(EFI_INC) -I$(EFI_INC)/x86_64 -I$(EFI_INC)/protocol -ffreestanding -fpic -fshort-wchar -mno-red-zone -fno-stack-protector -fno-strict-aliasing -fno-builtin -DGNU_EFI_USE_MS_ABI -DEFI_BUILD
+EFI_FLAGS = $(CFLAGS) $(CPPFLAGS) -I$(EFI_INC) -I$(EFI_INC)/x86_64 -I$(EFI_INC)/protocol -ffreestanding -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fpic -fshort-wchar -mno-red-zone -fno-stack-protector -fno-strict-aliasing -fno-builtin -DGNU_EFI_USE_MS_ABI -DEFI_BUILD
 EFI_OBJS = build/core.efi.o build/screen.efi.o build/charset.efi.o build/render.efi.o build/efi.efi.o build/runtime.efi.o
 
 .PHONY: all rom desktop efi test test-sanitize test-efi fuzz clean
@@ -26,12 +26,12 @@ build/core.efi.o: vendor/chips/m6502.h
 build/%.efi.o: src/%.c src/basic.h src/charset.h build/rom.h build/fonts.h
 	$(CC) $(EFI_FLAGS) -c $< -o $@
 build/basic.so: $(EFI_OBJS)
-	ld -nostdlib -znocombreloc -T $(EFI_LIB)/elf_x86_64_efi.lds -shared -Bsymbolic $(EFI_LIB)/crt0-efi-x86_64.o $(EFI_OBJS) -L$(EFI_LIB) -lefi -lgnuefi -o $@
+	ld -nostdlib --no-undefined -znocombreloc -T $(EFI_LIB)/elf_x86_64_efi.lds -shared -Bsymbolic $(EFI_LIB)/crt0-efi-x86_64.o $(EFI_OBJS) -L$(EFI_LIB) -lefi -lgnuefi -o $@
 efi: build/BOOTX64.EFI
 build/efi.debug.o: src/efi.c src/basic.h src/charset.h build/rom.h build/fonts.h
 	$(CC) $(EFI_FLAGS) -DBASIC_DEBUG_PORT -c $< -o $@
 build/basic-debug.so: build/core.efi.o build/screen.efi.o build/charset.efi.o build/render.efi.o build/efi.debug.o build/runtime.efi.o
-	ld -nostdlib -znocombreloc -T $(EFI_LIB)/elf_x86_64_efi.lds -shared -Bsymbolic $(EFI_LIB)/crt0-efi-x86_64.o $^ -L$(EFI_LIB) -lefi -lgnuefi -o $@
+	ld -nostdlib --no-undefined -znocombreloc -T $(EFI_LIB)/elf_x86_64_efi.lds -shared -Bsymbolic $(EFI_LIB)/crt0-efi-x86_64.o $^ -L$(EFI_LIB) -lefi -lgnuefi -o $@
 build/BOOTTEST.EFI: build/basic-debug.so
 	objcopy -j .text -j .sdata -j .data -j .rodata -j .dynstr -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64 $< $@
 build/BOOTX64.EFI: build/basic.so
