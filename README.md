@@ -1,5 +1,9 @@
 # BASIC EFI 0.1 — experimental prototype
 
+[![Torture CI](https://github.com/oodler577/basic-efi/actions/workflows/ci.yml/badge.svg)](https://github.com/oodler577/basic-efi/actions/workflows/ci.yml)
+
+[User guide](https://github.com/oodler577/basic-efi/wiki) · [Build artifacts](https://github.com/oodler577/basic-efi/actions) · [Graphics roadmap](https://github.com/oodler577/basic-efi/wiki/Graphics-roadmap)
+
 Boot into an editable blue BASIC screen on an x64 UEFI machine. This runs
 Microsoft's original 6502 BASIC source, adapted for an isolated 6502 virtual
 machine inside a small EFI application. No operating system is needed underneath.
@@ -216,8 +220,9 @@ select assembler binaries. `make desktop` builds a POSIX terminal frontend:
 Use at least an 80×25 terminal. This shares the EFI interpreter and screen
 model; its chosen program directory replaces the boot-volume BASIC folder.
 
-The image builder writes a regular file, rejects device targets and symlinks,
-and requires `--force` to replace an existing image. It never flashes a USB.
+The image builder prepares a regular file and publishes it atomically, rejects
+device targets and symlinks, and requires `--force` to replace an existing image.
+A failed build preserves the old image. It never flashes a USB.
 
 For the automated real-EFI test, build the debug-port variant separately:
 
@@ -238,6 +243,12 @@ copy of the production image selected with `TEST_IMAGE`. It verifies the saved
 file with `mtype` (`MTYPE` can override its path); review its generated screen
 captures for visible output and firmware return. Never run a test against an
 image containing work you want to preserve.
+
+The full CI runs GCC/Clang builds, sanitizers, seeded behavioral properties,
+coverage-guided fuzzing, PE validation, reproducible EFI rebuilds and four real
+EFI storage/boot scenarios. Run `make test-sanitize` and `make test-efi` locally;
+see the [testing guide](https://github.com/oodler577/basic-efi/wiki/Building-and-testing)
+for details. `python3 tools/package.py` creates a source/boot archive in `dist/`.
 
 See `VALIDATION.md` for the tested release and limits, and `NOTICE.md` for
 upstream attribution and the precise interpreter adaptations.

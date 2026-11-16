@@ -1,5 +1,27 @@
 # BASIC EFI 0.1 validation — November 16, 2026
 
+## Hardening milestone
+
+The expanded suite now has 30 Python tests, plus a C screen harness performing
+10,000 scrolls and 200,000 seeded edit events. It includes 2,400 integer
+expressions checked against Python, 600 model-checked program edits and 120
+malformed-import cases. All pass locally, including AddressSanitizer and
+UndefinedBehaviorSanitizer runs (LeakSanitizer disabled only in this local
+environment because process inspection is unavailable).
+
+All four local real-EFI scenarios pass: writable USB, production executable,
+read-only USB, and missing BASIC folder. The tests check persisted files, reset,
+break, error recovery, and return to the OVMF menu. The hosted workflow expands
+this to GCC/Clang, Ubuntu 22.04/24.04 and PC/qemu64 versus q35/max machines;
+consult the linked commit's Actions results for hosted status.
+
+Defects found by the expanded checks include character deletion leaving colors
+behind, and a Clang warning in the freestanding strcpy implementation. Both
+are fixed. Image creation now publishes atomically and preserves an old image
+when an external formatting/copy tool fails.
+
+The original prototype validation below is retained as its historical baseline.
+
 ## Environment
 
 - Build host: x86-64 Debian 13, GCC 14.2.0, GNU EFI 3.0.18.
